@@ -1,0 +1,55 @@
+@{
+    ViewData["Title"] = "Đăng ký thành công";
+}
+
+<div class="container py-5 animate-in">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden text-center">
+                <div class="bg-success p-5 text-white">
+                    <i class="bi bi-envelope-check fs-1 display-1 bounce"></i>
+                    <h2 class="fw-bold mt-3 mb-0">Đăng Ký Thành Công!</h2>
+                </div>
+                <div class="card-body p-4 p-md-5">
+                    <p class="fs-5 text-muted mb-4">
+                        Một liên kết kích hoạt tài khoản đã được gửi đến email:<br>
+                        <strong class="text-dark">@ViewBag.Email</strong>
+                    </p>
+                    
+                    <div class="alert alert-info border-0 rounded-3 p-3 mb-4 text-start">
+                        <h6 class="fw-bold mb-1"><i class="bi bi-info-circle-fill me-2"></i>Hướng dẫn tiếp theo:</h6>
+                        <ol class="small text-muted mb-0 ps-3">
+                            <li class="mb-1">Mở hộp thư đến Gmail của bạn.</li>
+                            <li class="mb-1">Tìm email từ <strong>NewComputerStore</strong> với chủ đề "Xác nhận địa chỉ Email".</li>
+                            <li class="mb-1">Nhấp vào nút <strong>"Xác nhận Email của tôi"</strong> để kích hoạt và tự động đăng nhập.</li>
+                        </ol>
+                    </div>
+
+                    <p class="small text-muted mb-4">
+                        * Đường dẫn xác minh này sẽ hết hạn sau <strong>24 giờ</strong>. Kiểm tra cả thư mục <strong>Spam (Thư rác)</strong> nếu bạn không tìm thấy email trong hộp thư chính.
+                    </p>
+
+                    <div class="d-flex gap-3 justify-content-center">
+                        <a href="https://mail.google.com" target="_blank" class="btn btn-primary btn-lg rounded-pill fw-bold px-4 shadow-sm">
+                            <i class="bi bi-google me-2"></i> Mở Gmail
+                        </a>
+                        <a asp-action="Login" class="btn btn-outline-secondary btn-lg rounded-pill fw-bold px-4">
+                            Đến trang Đăng nhập
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @@keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+    .bounce {
+        display: inline-block;
+        animation: bounce 2s infinite ease-in-out;
+    }
+</style>

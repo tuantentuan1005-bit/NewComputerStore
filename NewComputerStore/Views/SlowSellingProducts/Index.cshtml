@@ -1,0 +1,973 @@
+@model List<NewComputerStore.ViewModels.SlowSellingProductViewModel>
+@{
+    ViewData["Title"] = "Phân tích sản phẩm bán chậm";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<!-- Custom Styles for modern design -->
+<style>
+    /* Gradient Stats Cards */
+    .metric-card-1 { background: linear-gradient(135deg, #3a7bd5, #3a6073); }
+    .metric-card-2 { background: linear-gradient(135deg, #f857a6, #ff5858); }
+    .metric-card-3 { background: linear-gradient(135deg, #4b6cb7, #182848); }
+    .metric-card-4 { background: linear-gradient(135deg, #11998e, #38ef7d); }
+
+    .metric-card {
+        border: none;
+        border-radius: 12px;
+        color: white;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .metric-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+    }
+    .metric-card .card-icon {
+        font-size: 2.5rem;
+        opacity: 0.4;
+    }
+
+    /* Badges */
+    .badge-danger-custom { background-color: #ff4757; color: white; } /* Ế nặng */
+    .badge-warning-custom { background-color: #ffa502; color: #1e272e; } /* Bán chậm */
+    .badge-purple-custom { background-color: #8e44ad; color: white; } /* Tồn kho nguy hiểm */
+    .badge-secondary-custom { background-color: #7f8c8d; color: white; } /* Dead stock */
+    .badge-success-custom { background-color: #2ed573; color: white; } /* Ổn định */
+
+    /* Table styles */
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+        cursor: pointer;
+    }
+    .table td, .table th {
+        vertical-align: middle;
+    }
+    .product-img-th {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+    }
+
+    /* Bulk Action Floating Bar */
+    .bulk-action-bar {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: #1e272e;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 30px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        z-index: 1050;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .bulk-action-bar.active {
+        transform: translateX(-50%) translateY(0);
+    }
+
+    /* Skeleton Loading */
+    .skeleton-row td {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        color: transparent !important;
+        border-color: #eee;
+    }
+    .skeleton-row td * {
+        visibility: hidden;
+    }
+    @@keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    /* Print styling */
+    @@media print {
+        .no-print { display: none !important; }
+        body { background: white; color: black; }
+    }
+</style>
+
+<!-- SweetAlert2 for Toast & Modals -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<div class="container-fluid pt-3 pb-4">
+    <!-- Header Title -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom no-print">
+        <h1 class="h2 fw-bold text-dark"><i class="bi bi-bar-chart-line me-2"></i>@ViewData["Title"]</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="dropdown me-2">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-download me-1"></i> Xuất Báo cáo
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                    <li><a class="dropdown-item" href="@Url.Action("ExportExcel", new { type = "all", categoryId = ViewBag.CategoryId, status = ViewBag.Status, search = ViewBag.Search })"><i class="bi bi-file-earmark-excel me-2 text-success"></i>Tất cả (Excel)</a></li>
+                    <li><a class="dropdown-item" href="@Url.Action("ExportExcel", new { type = "slow", categoryId = ViewBag.CategoryId, status = ViewBag.Status, search = ViewBag.Search })"><i class="bi bi-file-earmark-excel-fill me-2 text-warning"></i>Bán chậm (Excel)</a></li>
+                    <li><a class="dropdown-item" href="@Url.Action("ExportExcel", new { type = "dead", categoryId = ViewBag.CategoryId, status = ViewBag.Status, search = ViewBag.Search })"><i class="bi bi-file-earmark-excel-fill me-2 text-danger"></i>Dead Stock (Excel)</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" target="_blank" href="@Url.Action("ExportPdfView", new { type = "all", categoryId = ViewBag.CategoryId, status = ViewBag.Status, search = ViewBag.Search })"><i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Tất cả (PDF)</a></li>
+                    <li><a class="dropdown-item" target="_blank" href="@Url.Action("ExportPdfView", new { type = "slow", categoryId = ViewBag.CategoryId, status = ViewBag.Status, search = ViewBag.Search })"><i class="bi bi-file-earmark-pdf-fill me-2 text-warning"></i>Bán chậm (PDF)</a></li>
+                    <li><a class="dropdown-item" target="_blank" href="@Url.Action("ExportPdfView", new { type = "dead", categoryId = ViewBag.CategoryId, status = ViewBag.Status, search = ViewBag.Search })"><i class="bi bi-file-earmark-pdf-fill me-2 text-danger"></i>Dead Stock (PDF)</a></li>
+                </ul>
+            </div>
+            <button type="button" onclick="refreshData()" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-arrow-clockwise"></i> Tải lại dữ liệu
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4 no-print">
+        <div class="col-md-3 col-sm-6">
+            <div class="card metric-card metric-card-1 shadow-sm h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase text-white-50 small mb-1">Sản phẩm bán chậm</h6>
+                        <h3 class="mb-0 fw-bold">@ViewBag.TotalSlowSelling</h3>
+                    </div>
+                    <div class="card-icon"><i class="bi bi-graph-down"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card metric-card metric-card-2 shadow-sm h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase text-white-50 small mb-1">Tồn kho cao (>10)</h6>
+                        <h3 class="mb-0 fw-bold">@ViewBag.TotalHighStock</h3>
+                    </div>
+                    <div class="card-icon"><i class="bi bi-boxes"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card metric-card metric-card-3 shadow-sm h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase text-white-50 small mb-1">Chưa từng bán</h6>
+                        <h3 class="mb-0 fw-bold">@ViewBag.TotalNeverSold</h3>
+                    </div>
+                    <div class="card-icon"><i class="bi bi-eye-slash"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card metric-card metric-card-4 shadow-sm h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase text-white-50 small mb-1">Tổng giá trị hàng tồn</h6>
+                        <h3 class="mb-0 fw-bold">@LocalizationHelper.FormatCurrency(ViewBag.TotalInventoryValue)</h3>
+                    </div>
+                    <div class="card-icon"><i class="bi bi-currency-dollar"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-3 mb-4 no-print">
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white fw-bold"><i class="bi bi-pie-chart me-2 text-primary"></i>Phân bố Trạng thái Sản phẩm</div>
+                <div class="card-body d-flex align-items-center justify-content-center" style="min-height: 250px;">
+                    <canvas id="statusPieChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white fw-bold"><i class="bi bi-donut-char me-2 text-success"></i>Giá trị Tồn kho theo Danh mục</div>
+                <div class="card-body d-flex align-items-center justify-content-center" style="min-height: 250px;">
+                    <canvas id="categoryDoughnutChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-12">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white fw-bold"><i class="bi bi-bar-chart me-2 text-danger"></i>Xếp hạng HeatScore (Thấp nhất = Bán chậm nhất)</div>
+                <div class="card-body d-flex align-items-center justify-content-center" style="min-height: 250px;">
+                    <canvas id="heatscoreBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters & Search Form -->
+    <div class="card mb-4 shadow-sm no-print">
+        <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-funnel me-1 text-primary"></i> Bộ lọc & Tìm kiếm nhanh</span>
+            <a href="@Url.Action("Index")" class="btn btn-link btn-sm p-0 text-decoration-none">Đặt lại bộ lọc</a>
+        </div>
+        <div class="card-body">
+            <form method="get" id="filterForm" action="@Url.Action("Index")" class="row g-2">
+                <div class="col-md-3 col-sm-6">
+                    <label class="form-label small mb-1">Tìm kiếm</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" name="search" id="searchInput" value="@ViewBag.Search" class="form-control" placeholder="Tên hoặc mã sản phẩm...">
+                    </div>
+                </div>
+                <div class="col-md-2 col-sm-6">
+                    <label class="form-label small mb-1">Danh mục</label>
+                    <select name="categoryId" class="form-select form-select-sm">
+                        <option value="">Tất cả danh mục</option>
+                        @foreach (var cat in ViewBag.Categories)
+                        {
+                            if (ViewBag.CategoryId == cat.CategoryId)
+                            {
+                                <option value="@cat.CategoryId" selected>@cat.CategoryName</option>
+                            }
+                            else
+                            {
+                                <option value="@cat.CategoryId">@cat.CategoryName</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2 col-sm-6">
+                    <label class="form-label small mb-1">Trạng thái</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">Tất cả trạng thái</option>
+                        @foreach (var st in new[] { "Ổn định", "Bán chậm", "Ế nặng", "Tồn kho nguy hiểm", "Dead stock" })
+                        {
+                            if (ViewBag.Status == st)
+                            {
+                                <option value="@st" selected>@st</option>
+                            }
+                            else
+                            {
+                                <option value="@st">@st</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <label class="form-label small mb-1">Tồn kho / Đã bán</label>
+                    <div class="d-flex gap-1">
+                        <input type="number" name="minStock" value="@ViewBag.MinStock" class="form-control form-control-sm" placeholder="Tồn tối thiểu" title="Tồn kho tối thiểu">
+                        <input type="number" name="maxStock" value="@ViewBag.MaxStock" class="form-control form-control-sm" placeholder="Tồn tối đa" title="Tồn kho tối đa">
+                    </div>
+                </div>
+                <div class="col-md-2 col-sm-6">
+                    <label class="form-label small mb-1">Sắp xếp</label>
+                    <select name="sortBy" class="form-select form-select-sm">
+                        @foreach (var sort in new Dictionary<string, string> {
+                            { "heatscore_asc", "HeatScore: Thấp → Cao" },
+                            { "heatscore_desc", "HeatScore: Cao → Thấp" },
+                            { "stock_desc", "Tồn kho: Nhiều → Ít" },
+                            { "stock_asc", "Tồn kho: Ít → Nhiều" },
+                            { "sold_desc", "Đã bán: Nhiều → Ít" },
+                            { "sold_asc", "Đã bán: Ít → Nhiều" },
+                            { "name_asc", "Tên sản phẩm: A-Z" }
+                        })
+                        {
+                            if (ViewBag.SortBy == sort.Key)
+                            {
+                                <option value="@sort.Key" selected>@sort.Value</option>
+                            }
+                            else
+                            {
+                                <option value="@sort.Key">@sort.Value</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <button type="submit" style="display: none;"></button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Data Table Card -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+            <span>Danh sách sản phẩm bán chậm</span>
+            <span class="badge bg-primary">Tìm thấy @ViewBag.TotalItems sản phẩm</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3" style="width: 40px;">
+                                <input type="checkbox" id="checkAll" class="form-check-input">
+                            </th>
+                            <th style="width: 70px;">Hình ảnh</th>
+                            <th>Tên sản phẩm</th>
+                            <th>Danh mục</th>
+                            <th class="text-end">Giá bán</th>
+                            <th class="text-center">Đã bán</th>
+                            <th class="text-center">Tồn kho</th>
+                            <th class="text-end">Lượt xem</th>
+                            <th class="text-center">CR (%)</th>
+                            <th>Ngày bán cuối</th>
+                            <th>Trạng thái</th>
+                            <th>Khuyến nghị</th>
+                            <th class="text-end pe-3" style="width: 150px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productTableBody">
+                        @if (Model.Any())
+                        {
+                            foreach (var item in Model)
+                            {
+                                var badgeClass = item.Status switch
+                                {
+                                    "Ế nặng" => "badge-danger-custom",
+                                    "Bán chậm" => "badge-warning-custom",
+                                    "Tồn kho nguy hiểm" => "badge-purple-custom",
+                                    "Dead stock" => "badge-secondary-custom",
+                                    "Ổn định" => "badge-success-custom",
+                                    _ => "badge-success-custom"
+                                };
+
+                                var crBadgeClass = item.ConversionRate < 1.0 ? "bg-danger" : (item.ConversionRate <= 3.0 ? "bg-warning text-dark" : "bg-success");
+
+                                <tr id="row-@item.ProductId" data-id="@item.ProductId" class="@(item.IsHidden ? "opacity-75 bg-light" : "")">
+                                    <td class="ps-3">
+                                        <input type="checkbox" class="form-check-input itemCheckbox" value="@item.ProductId">
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                        {
+                                            <img src="/images/@item.ImageUrl" class="product-img-th" alt="Product Image">
+                                        }
+                                        else
+                                        {
+                                            <span class="d-inline-block product-img-th bg-secondary-subtle d-flex align-items-center justify-content-center text-muted"><i class="bi bi-image"></i></span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">@item.ProductName</div>
+                                        <small class="text-muted">ID: #@item.ProductId | HeatScore: <span class="fw-bold text-primary">@item.HeatScore.ToString("0.##")</span></small>
+                                    </td>
+                                    <td>@item.CategoryName</td>
+                                    <td id="price-cell-@item.ProductId" class="text-end fw-bold text-dark" data-price="@item.Price">
+                                        @if (item.DiscountPercent > 0)
+                                        {
+                                            <div><small class="text-decoration-line-through text-muted fw-normal">@item.Price.ToString("N0")₫</small> <span class="badge bg-danger">-@item.DiscountPercent.ToString("0")%</span></div>
+                                            <span class="text-danger">@item.FinalPrice.ToString("N0")₫</span>
+                                        }
+                                        else
+                                        {
+                                            @item.Price.ToString("N0")<text>₫</text>
+                                        }
+                                    </td>
+                                    <td class="text-center fw-bold text-success">@item.TotalSold</td>
+                                    <td class="text-center fw-bold text-orange">@item.StockQuantity</td>
+                                    <td class="text-center">@item.ViewCount <i class="bi bi-eye text-muted ms-1"></i></td>
+                                    <td class="text-center">
+                                        <span class="badge @crBadgeClass">@item.ConversionRate.ToString("0.##")%</span>
+                                        <div class="text-muted" style="font-size: 9px;">@item.ConversionRateText</div>
+                                    </td>
+                                    <td>
+                                        <div>@(item.LastSoldDate.HasValue ? item.LastSoldDate.Value.ToString("dd/MM/yyyy") : "Chưa bán")</div>
+                                        @if (item.LastSoldDate.HasValue)
+                                        {
+                                            <small class="text-muted">@item.DaysSinceLastSale ngày trước</small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-danger font-monospace">Chưa có đơn</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge @badgeClass">@item.Status</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info text-dark" style="font-weight: 500;" title="@item.SuggestedReason">@item.SuggestedPromotion</span>
+                                        <div style="font-size: 10px; color:#888;">@item.SuggestedReason</div>
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" onclick="openDiscountModal(@item.ProductId, '@item.ProductName')" class="btn btn-outline-success" title="Tạo giảm giá"><i class="bi bi-percent"></i></button>
+                                            <button type="button" onclick="openFlashSaleModal(@item.ProductId, '@item.ProductName')" class="btn btn-outline-warning" title="Tạo Flash Sale"><i class="bi bi-lightning-charge"></i></button>
+                                            @if (item.DiscountPercent > 0)
+                                            {
+                                                <button type="button"
+                                                        onclick="cancelSale(@item.ProductId, '@System.Web.HttpUtility.JavaScriptStringEncode(item.ProductName)', @item.DiscountPercent.ToString("0", System.Globalization.CultureInfo.InvariantCulture))"
+                                                        class="btn btn-danger cancel-sale-btn"
+                                                        title="Hủy sale đang chạy (-@item.DiscountPercent.ToString("0")%)">
+                                                    <i class="bi bi-x-circle-fill"></i>&nbsp;-@item.DiscountPercent.ToString("0")%
+                                                </button>
+                                            }
+                                            <a href="/Product/Details/@item.ProductId" target="_blank" class="btn btn-outline-info" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
+                                            <button type="button" onclick="toggleHideProduct(@item.ProductId)" class="btn btn-outline-secondary toggle-hide-btn" title="@(item.IsHidden ? "Hiển thị lại trang chủ" : "Ẩn khỏi trang chủ")">
+                                                <i class="bi @(item.IsHidden ? "bi-eye-slash-fill text-danger" : "bi-eye")"></i>
+                                            </button>
+                                            <button type="button" onclick="discontinueProduct(@item.ProductId)" class="btn btn-outline-danger" title="Ngừng kinh doanh"><i class="bi bi-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr id="emptyRow">
+                                <td colspan="13" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                    Không tìm thấy sản phẩm nào bán chậm thỏa mãn bộ lọc.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination Footer -->
+        @if (ViewBag.TotalPages > 1)
+        {
+            <div class="card-footer bg-white d-flex justify-content-between align-items-center no-print">
+                <div class="text-muted small">
+                    Hiển thị từ @(((ViewBag.CurrentPage - 1) * ViewBag.PageSize) + 1) đến @Math.Min(ViewBag.CurrentPage * ViewBag.PageSize, ViewBag.TotalItems) của @ViewBag.TotalItems sản phẩm
+                </div>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(ViewBag.CurrentPage == 1 ? "disabled" : "")">
+                            <a class="page-link" href="#" onclick="changePage(@(ViewBag.CurrentPage - 1))"><i class="bi bi-chevron-left"></i></a>
+                        </li>
+                        @for (int i = 1; i <= ViewBag.TotalPages; i++)
+                        {
+                            <li class="page-item @(ViewBag.CurrentPage == i ? "active" : "")">
+                                <a class="page-link" href="#" onclick="changePage(@i)">@i</a>
+                            </li>
+                        }
+                        <li class="page-item @(ViewBag.CurrentPage == ViewBag.TotalPages ? "disabled" : "")">
+                            <a class="page-link" href="#" onclick="changePage(@(ViewBag.CurrentPage + 1))"><i class="bi bi-chevron-right"></i></a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Floating Bulk Action Bar -->
+<div class="bulk-action-bar no-print" id="bulkMenuBar">
+    <span class="fw-bold"><i class="bi bi-check2-square text-success me-1"></i> Đã chọn <span id="selectedCount">0</span> sản phẩm</span>
+    <div class="vr"></div>
+    <div class="btn-group btn-group-sm">
+        <button type="button" onclick="bulkActionSubmit('hide')" class="btn btn-light"><i class="bi bi-eye-slash me-1"></i>Ẩn trang chủ</button>
+        <button type="button" onclick="bulkActionSubmit('show')" class="btn btn-light"><i class="bi bi-eye me-1"></i>Hiện trang chủ</button>
+        <button type="button" onclick="bulkActionSubmit('flash_sale')" class="btn btn-warning"><i class="bi bi-lightning-charge me-1"></i>Gắn Flash Sale</button>
+        <button type="button" onclick="bulkActionSubmit('remove_discount')" class="btn btn-danger" style="background:#e74c3c;border-color:#e74c3c;"><i class="bi bi-x-circle-fill me-1"></i>Hủy Sale</button>
+        <button type="button" onclick="bulkActionSubmit('delete')" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Ngừng bán</button>
+    </div>
+</div>
+
+<!-- Single Discount Modal -->
+<div class="modal fade no-print" id="discountModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="discountTitle">Cấu hình giảm giá</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="discountProductId">
+                <div class="mb-3">
+                    <label class="form-label">Tên sản phẩm</label>
+                    <input type="text" id="discountProductName" class="form-control" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Tỷ lệ giảm giá (%)</label>
+                    <div class="input-group">
+                        <input type="number" id="discountPercentage" class="form-control" min="1" max="95" value="10">
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" onclick="submitDiscount()" class="btn btn-success">Xác nhận giảm giá</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Single Flash Sale Modal -->
+<div class="modal fade no-print" id="flashSaleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Cấu hình chương trình Flash Sale</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="flashSaleProductId">
+                <div class="mb-3">
+                    <label class="form-label">Tên sản phẩm</label>
+                    <input type="text" id="flashSaleProductName" class="form-control" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Tỷ lệ giảm giá Flash Sale (%)</label>
+                    <div class="input-group">
+                        <input type="number" id="flashSalePercentage" class="form-control" min="5" max="90" value="20">
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" onclick="submitFlashSale()" class="btn btn-warning">Kích hoạt Flash Sale</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts Section for AJAX, Sorting, and Charts -->
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Custom Swal Toast Mixin matching Toast System Requirements
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 4000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        // Search typing timer (Realtime search)
+        let searchTimer;
+        document.getElementById('searchInput').addEventListener('input', function() {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                document.getElementById('filterForm').submit();
+            }, 600);
+        });
+
+        // Trigger filters submit on change
+        document.querySelectorAll('#filterForm select, #filterForm input[type="number"]').forEach(elem => {
+            elem.addEventListener('change', () => {
+                document.getElementById('filterForm').submit();
+            });
+        });
+
+        // Pagination page change helper
+        function changePage(pageNum) {
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('page', pageNum);
+            window.location.search = urlParams.toString();
+        }
+
+        // Refresh Data endpoint (Clear Cache & reload)
+        function refreshData() {
+            Toast.fire({ icon: 'info', title: 'Đang làm mới dữ liệu từ Database...' });
+            setTimeout(() => {
+                // To force refresh cache, we can just do a refresh.
+                // The Controller's ToggleHide / Discount / Bulk actions automatically clear the cache,
+                // so we reload the page.
+                window.location.reload();
+            }, 1000);
+        }
+
+        // Checkbox management for Bulk Actions
+        const checkAll = document.getElementById('checkAll');
+        const checkboxes = document.querySelectorAll('.itemCheckbox');
+        const bulkMenuBar = document.getElementById('bulkMenuBar');
+        const selectedCountSpan = document.getElementById('selectedCount');
+
+        checkAll.addEventListener('change', function() {
+            checkboxes.forEach(cb => cb.checked = this.checked);
+            toggleBulkBar();
+        });
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', toggleBulkBar);
+        });
+
+        function toggleBulkBar() {
+            const checkedBoxes = document.querySelectorAll('.itemCheckbox:checked');
+            selectedCountSpan.innerText = checkedBoxes.length;
+            if (checkedBoxes.length > 0) {
+                bulkMenuBar.classList.add('active');
+            } else {
+                bulkMenuBar.classList.remove('active');
+            }
+        }
+
+        // AJAX single actions
+        function toggleHideProduct(productId) {
+            Toast.fire({ icon: 'info', title: 'Đang xử lý...' });
+            
+            $.ajax({
+                url: '@Url.Action("ToggleHide")',
+                type: 'POST',
+                data: { id: productId },
+                success: function(res) {
+                    if (res.success) {
+                        const row = document.getElementById('row-' + productId);
+                        if (res.isHidden) {
+                            row.classList.add('opacity-75', 'bg-light');
+                            row.querySelector('.toggle-hide-btn i').className = 'bi bi-eye-slash-fill text-danger';
+                            Toast.fire({ icon: 'success', title: res.message });
+                        } else {
+                            row.classList.remove('opacity-75', 'bg-light');
+                            row.querySelector('.toggle-hide-btn i').className = 'bi bi-eye';
+                            Toast.fire({ icon: 'success', title: res.message });
+                        }
+                    } else {
+                        Toast.fire({ icon: 'error', title: res.message });
+                    }
+                },
+                error: function() {
+                    Toast.fire({ icon: 'error', title: 'Lỗi hệ thống khi thực hiện hành động.' });
+                }
+            });
+        }
+
+        function discontinueProduct(productId) {
+            Swal.fire({
+                title: 'Ngừng kinh doanh sản phẩm này?',
+                text: "Sản phẩm sẽ bị xóa mềm khỏi trang chủ và tất cả danh sách khách hàng!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Đồng ý ngừng kinh doanh',
+                cancelButtonText: 'Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '@Url.Action("Discontinue")',
+                        type: 'POST',
+                        data: { id: productId },
+                        success: function(res) {
+                            if (res.success) {
+                                // Fade out row and remove from DOM
+                                $('#row-' + productId).fadeOut(600, function() {
+                                    $(this).remove();
+                                    // Refresh status
+                                    Toast.fire({ icon: 'success', title: res.message });
+                                });
+                            } else {
+                                Toast.fire({ icon: 'error', title: res.message });
+                            }
+                        },
+                        error: function() {
+                            Toast.fire({ icon: 'error', title: 'Lỗi hệ thống khi ngừng kinh doanh.' });
+                        }
+                    });
+                }
+            });
+        }
+
+        // Single Discount
+        const discountModal = new bootstrap.Modal(document.getElementById('discountModal'));
+        function openDiscountModal(id, name) {
+            document.getElementById('discountProductId').value = id;
+            document.getElementById('discountProductName').value = name;
+            discountModal.show();
+        }
+
+        function submitDiscount() {
+            const id = document.getElementById('discountProductId').value;
+            const percentage = parseInt(document.getElementById('discountPercentage').value);
+            discountModal.hide();
+            
+            const cell = $('#price-cell-' + id);
+            const oldHtml = cell.html();
+            
+            Toast.fire({ icon: 'info', title: 'Đang áp dụng giảm giá...' });
+            
+            $.ajax({
+                url: '@Url.Action("ApplyDiscount")',
+                type: 'POST',
+                data: { id: id, percentage: percentage },
+                success: function(res) {
+                    if (res.success) {
+                        const price = parseFloat(cell.data('price'));
+                        const finalPrice = Math.max(0, Math.round(price - (price * percentage / 100)));
+                        const formattedPrice = price.toLocaleString('vi-VN') + '₫';
+                        const formattedFinalPrice = finalPrice.toLocaleString('vi-VN') + '₫';
+                        
+                        let newHtml = '';
+                        if (percentage > 0) {
+                            newHtml = `<div><small class="text-decoration-line-through text-muted fw-normal">${formattedPrice}</small> <span class="badge bg-danger">-${percentage}%</span></div>` +
+                                      `<span class="text-danger">${formattedFinalPrice}</span>`;
+                        } else {
+                            newHtml = formattedPrice;
+                        }
+                        
+                        cell.fadeOut(200, function() {
+                            cell.html(newHtml).fadeIn(200);
+                            cell.css('background-color', '#fff3cd');
+                            setTimeout(() => {
+                                cell.css({
+                                    'background-color': '',
+                                    'transition': 'background-color 1s ease'
+                                });
+                            }, 1000);
+                        });
+                        
+                        Toast.fire({ icon: 'success', title: res.message });
+                    } else {
+                        cell.html(oldHtml);
+                        Toast.fire({ icon: 'error', title: res.message });
+                    }
+                },
+                error: function() {
+                    cell.html(oldHtml);
+                    Toast.fire({ icon: 'error', title: 'Gặp lỗi trong quá trình tạo giảm giá.' });
+                }
+            });
+        }
+
+        // Single Flash Sale
+        const flashSaleModal = new bootstrap.Modal(document.getElementById('flashSaleModal'));
+        function openFlashSaleModal(id, name) {
+            document.getElementById('flashSaleProductId').value = id;
+            document.getElementById('flashSaleProductName').value = name;
+            flashSaleModal.show();
+        }
+
+        function submitFlashSale() {
+            const id = document.getElementById('flashSaleProductId').value;
+            const percentage = parseInt(document.getElementById('flashSalePercentage').value);
+            flashSaleModal.hide();
+
+            const cell = $('#price-cell-' + id);
+            const oldHtml = cell.html();
+            
+            Toast.fire({ icon: 'info', title: 'Đang kích hoạt Flash Sale...' });
+
+            $.ajax({
+                url: '@Url.Action("ApplyDiscount")',
+                type: 'POST',
+                data: { id: id, percentage: percentage },
+                success: function(res) {
+                    if (res.success) {
+                        const price = parseFloat(cell.data('price'));
+                        const finalPrice = Math.max(0, Math.round(price - (price * percentage / 100)));
+                        const formattedPrice = price.toLocaleString('vi-VN') + '₫';
+                        const formattedFinalPrice = finalPrice.toLocaleString('vi-VN') + '₫';
+                        
+                        let newHtml = `<div><small class="text-decoration-line-through text-muted fw-normal">${formattedPrice}</small> <span class="badge bg-danger">-${percentage}%</span></div>` +
+                                      `<span class="text-danger">${formattedFinalPrice}</span>`;
+                        
+                        cell.fadeOut(200, function() {
+                            cell.html(newHtml).fadeIn(200);
+                            cell.css('background-color', '#fff3cd');
+                            setTimeout(() => {
+                                cell.css({
+                                    'background-color': '',
+                                    'transition': 'background-color 1s ease'
+                                });
+                            }, 1000);
+                        });
+                        
+                        Toast.fire({ icon: 'success', title: 'Kích hoạt Flash Sale (-' + percentage + '%) thành công!' });
+                    } else {
+                        cell.html(oldHtml);
+                        Toast.fire({ icon: 'error', title: res.message });
+                    }
+                },
+                error: function() {
+                    cell.html(oldHtml);
+                    Toast.fire({ icon: 'error', title: 'Gặp lỗi khi tạo Flash Sale.' });
+                }
+            });
+        }
+
+        // ── Hủy Sale đơn lẻ ──
+        function cancelSale(productId, productName, currentDiscount) {
+            Swal.fire({
+                title: 'Hủy sale sản phẩm này?',
+                html: `<b>${productName}</b><br><br>` +
+                      `Giảm giá hiện tại: <span class="badge bg-danger fs-6">-${currentDiscount}%</span><br>` +
+                      `<small class="text-muted">Sản phẩm sẽ trở về giá gốc sau khi hủy.</small>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#e74c3c',
+                cancelButtonColor: '#7f8c8d',
+                confirmButtonText: '<i class="bi bi-x-circle-fill me-1"></i>Xác nhận hủy sale',
+                cancelButtonText: 'Không, giữ lại'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Toast.fire({ icon: 'info', title: 'Đang hủy sale...' });
+                    const cell = $('#price-cell-' + productId);
+                    const oldHtml = cell.html();
+
+                    $.ajax({
+                        url: '@Url.Action("ApplyDiscount")',
+                        type: 'POST',
+                        data: { id: productId, percentage: 0 },
+                        success: function(res) {
+                            if (res.success) {
+                                // Restore price display (no discount)
+                                const price = parseFloat(cell.data('price'));
+                                const formattedPrice = price.toLocaleString('vi-VN') + '₫';
+                                cell.fadeOut(200, function() {
+                                    cell.html(formattedPrice).fadeIn(200);
+                                    cell.css('background-color', '#d4edda');
+                                    setTimeout(() => {
+                                        cell.css({ 'background-color': '', 'transition': 'background-color 1s ease' });
+                                    }, 1500);
+                                });
+                                // Remove the cancel-sale button from this row
+                                const row = document.getElementById('row-' + productId);
+                                if (row) {
+                                    const btn = row.querySelector('.cancel-sale-btn');
+                                    if (btn) btn.remove();
+                                }
+                                Toast.fire({ icon: 'success', title: `Đã hủy sale cho "${productName}". Giá đã về gốc!` });
+                            } else {
+                                Toast.fire({ icon: 'error', title: res.message });
+                            }
+                        },
+                        error: function() {
+                            Toast.fire({ icon: 'error', title: 'Lỗi hệ thống khi hủy sale.' });
+                        }
+                    });
+                }
+            });
+        }
+
+        // Bulk Actions
+        function bulkActionSubmit(action) {
+            const checkedBoxes = document.querySelectorAll('.itemCheckbox:checked');
+            const productIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+
+
+            let actionText = "";
+            let btnColor = "#3085d6";
+            if (action === "hide") { actionText = "Ẩn trang chủ"; btnColor = "#ffa502"; }
+            else if (action === "show") { actionText = "Hiển thị lại trang chủ"; btnColor = "#2ed573"; }
+            else if (action === "delete") { actionText = "Ngừng kinh doanh (Xóa mềm)"; btnColor = "#d33"; }
+            else if (action === "flash_sale") { actionText = "Gắn nhãn Flash Sale"; btnColor = "#f57c00"; }
+            else if (action === "remove_discount") { actionText = "Hủy Sale / Xóa giảm giá"; btnColor = "#e74c3c"; }
+
+            // Confirm bulk action
+            Swal.fire({
+                title: 'Xác nhận thao tác hàng loạt?',
+                text: 'Bạn có chắc muốn thực hiện hành động "' + actionText + '" cho ' + productIds.length + ' sản phẩm đã chọn?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: btnColor,
+                cancelButtonColor: '#7f8c8d',
+                confirmButtonText: 'Xác nhận thực hiện',
+                cancelButtonText: 'Hủy bỏ'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Toast.fire({ icon: 'info', title: 'Đang xử lý hàng loạt sản phẩm...' });
+                    
+                    $.ajax({
+                        url: '@Url.Action("BulkAction")',
+                        type: 'POST',
+                        data: { productIds: productIds, actionName: action, discountPercent: 20 },
+                        success: function(res) {
+                            if (res.success) {
+                                Swal.fire({
+                                    title: 'Hoàn tất thao tác hàng loạt!',
+                                    text: res.message,
+                                    icon: 'success'
+                                }).then(() => {
+                                    window.location.reload();
+                                });
+                            } else {
+                                Toast.fire({ icon: 'error', title: res.message });
+                            }
+                        },
+                        error: function() {
+                            Toast.fire({ icon: 'error', title: 'Thao tác hàng loạt thất bại (Rollback).' });
+                        }
+                    });
+                }
+            });
+        }
+
+        // Render Charts using Chart.js
+        document.addEventListener("DOMContentLoaded", function() {
+            // Chart.js global config for responsiveness
+            Chart.defaults.responsive = true;
+            Chart.defaults.maintainAspectRatio = false;
+
+            // 1. Status Pie Chart
+            const statusLabels = @Html.Raw(Json.Serialize(ViewBag.StatusCounts.Keys));
+            const statusValues = @Html.Raw(Json.Serialize(ViewBag.StatusCounts.Values));
+            
+            const ctx1 = document.getElementById('statusPieChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'pie',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        data: statusValues,
+                        backgroundColor: [
+                            '#ff4757', // Ế nặng - Đỏ
+                            '#ffa502', // Bán chậm - Vàng
+                            '#8e44ad', // Tồn kho nguy hiểm - Tím
+                            '#7f8c8d', // Dead stock - Xám
+                            '#2ed573'  // Ổn định - Xanh
+                        ]
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
+                    }
+                }
+            });
+
+            // 2. Category Doughnut Chart
+            const categoryLabels = @Html.Raw(Json.Serialize(ViewBag.CategoryInventory.Keys));
+            const categoryValues = @Html.Raw(Json.Serialize(ViewBag.CategoryInventory.Values));
+
+            const ctx2 = document.getElementById('categoryDoughnutChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: categoryLabels,
+                    datasets: [{
+                        data: categoryValues,
+                        backgroundColor: ['#4b6cb7', '#38ef7d', '#ffa502', '#ff4757', '#9b59b6']
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
+                    }
+                }
+            });
+
+            // 3. Top 10 lowest HeatScore Bar Chart
+            const heatscoreLabels = @Html.Raw(Json.Serialize(((IEnumerable<NewComputerStore.ViewModels.SlowSellingProductViewModel>)ViewBag.Top10Slowest).Select(x => x.ProductName.Length > 15 ? x.ProductName.Substring(0, 15) + "..." : x.ProductName)));
+            const heatscoreValues = @Html.Raw(Json.Serialize(((IEnumerable<NewComputerStore.ViewModels.SlowSellingProductViewModel>)ViewBag.Top10Slowest).Select(x => x.HeatScore)));
+
+            const ctx3 = document.getElementById('heatscoreBarChart').getContext('2d');
+            new Chart(ctx3, {
+                type: 'bar',
+                data: {
+                    labels: heatscoreLabels,
+                    datasets: [{
+                        label: 'HeatScore (Càng thấp càng bán chậm)',
+                        data: heatscoreValues,
+                        backgroundColor: '#ff6b81',
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { grid: { display: false } }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        });
+    </script>
+}

@@ -1,0 +1,50 @@
+@model NewComputerStore.Models.User
+@{
+    ViewData["Title"] = LocalizationHelper.T("My Account");
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-header bg-primary text-white text-center py-4">
+                    <i class="bi bi-person-circle display-1"></i>
+                    <h3 class="mb-0 mt-2">@LocalizationHelper.T("My Profile")</h3>
+                </div>
+                <div class="card-body p-4 bg-white">
+                    <div class="mb-3 border-bottom pb-3">
+                        <small class="text-muted text-uppercase fw-bold"><i class="bi bi-person-vcard"></i> @LocalizationHelper.T("Full Name")</small>
+                        <p class="lead mb-0 fw-semibold">@Model.FullName</p>
+                    </div>
+                    <div class="mb-3 border-bottom pb-3">
+                        <small class="text-muted text-uppercase fw-bold"><i class="bi bi-envelope"></i> @LocalizationHelper.T("Email address")</small>
+                        <p class="lead mb-0">@Model.Email</p>
+                    </div>
+                    <div class="mb-3 border-bottom pb-3">
+                        <small class="text-muted text-uppercase fw-bold"><i class="bi bi-shield-check"></i> @LocalizationHelper.T("Account Role")</small>
+                        <p class="lead mb-0 mt-1">
+                            <span class="badge @(Model.Role == "Admin" ? "bg-danger" : Model.Role == "Staff" ? "bg-info text-dark" : "bg-primary") px-3 py-2">
+                                <i class="bi @(Model.Role == "Admin" ? "bi-shield-lock" : Model.Role == "Staff" ? "bi-person-badge" : "bi-person")"></i> @LocalizationHelper.T(Model.Role)
+                            </span>
+                        </p>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted text-uppercase fw-bold"><i class="bi bi-activity"></i> @LocalizationHelper.T("Account Status")</small>
+                        <p class="lead mb-0 mt-1">
+                            @if(Model.IsActive) {
+                                <span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> @LocalizationHelper.T("Active")</span>
+                            } else {
+                                <span class="text-danger fw-bold"><i class="bi bi-x-circle-fill"></i> @LocalizationHelper.T("Locked")</span>
+                            }
+                        </p>
+                    </div>
+                    
+                    <div class="d-grid mt-4 gap-2">
+                        <a asp-controller="Order" asp-action="Index" class="btn btn-primary"><i class="bi bi-box-seam"></i> @LocalizationHelper.T("View My Orders")</a>
+                        <a asp-action="Logout" class="btn btn-outline-danger"><i class="bi bi-box-arrow-right"></i> @LocalizationHelper.T("Log out")</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,538 @@
+@model NewComputerStore.Models.Product
+@using NewComputerStore.Helpers
+
+@{
+    ViewData["Title"] = Model.ProductName;
+}
+
+<style>
+    /* ── Color Picker ── */
+    .color-circle {
+        display: inline-block;
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        border: 3px solid #fff;
+        box-shadow: 0 0 8px rgba(0,0,0,.15);
+        cursor: pointer;
+        transition: all .3s ease;
+    }
+    .color-circle:hover  { transform: scale(1.15); box-shadow: 0 0 12px rgba(0,0,0,.25); }
+    .color-circle.active { border-color: #0d6efd; transform: scale(1.2); box-shadow: 0 0 15px rgba(13,110,253,.4); }
+    .color-circle.out-of-stock { opacity: .4; cursor: not-allowed; position: relative; }
+    .color-circle.out-of-stock::after { content:'✕'; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#fff; font-size:14px; text-shadow:0 0 2px #000; }
+
+    /* ── Add to Cart Button ── */
+    .btn-gradient { background: linear-gradient(45deg,#0d6efd,#00d2ff); color:#fff; border:none; }
+    .btn-gradient:hover { background: linear-gradient(45deg,#0b5ed7,#00b8e6); color:#fff; transform:translateY(-2px); }
+    .btn-gradient:disabled { background:#ccc; transform:none; }
+
+    /* ── Tab buttons ── */
+    .spec-tabs { display:flex; gap:12px; justify-content:center; margin-bottom:28px; }
+    .spec-tab-btn {
+        padding: 10px 32px;
+        border-radius: 30px;
+        border: 2px solid #0d6efd;
+        background: #fff;
+        color: #0d6efd;
+        font-weight: 600;
+        font-size: .95rem;
+        cursor: pointer;
+        transition: all .25s ease;
+        white-space: nowrap;
+    }
+    .spec-tab-btn.active {
+        background: linear-gradient(135deg,#0d6efd,#00aaff);
+        color: #fff;
+        box-shadow: 0 4px 16px rgba(13,110,253,.35);
+    }
+    .spec-tab-btn:not(.active):hover { background: #f0f5ff; }
+
+    /* ── Accordion overrides ── */
+    .spec-accordion { border-radius: 14px; overflow: hidden; box-shadow: 0 2px 16px rgba(0,0,0,.07); }
+    .spec-accordion .accordion-item {
+        border: none;
+        border-bottom: 1px solid #e8ecf0;
+        background: #f8f9fb;
+    }
+    .spec-accordion .accordion-item:last-child { border-bottom: none; }
+    .spec-accordion .accordion-button {
+        background: #f8f9fb;
+        font-weight: 600;
+        font-size: 1rem;
+        color: #1a2340;
+        border-radius: 0 !important;
+        padding: 18px 22px;
+        gap: 12px;
+        transition: background .2s ease, color .2s ease;
+        box-shadow: none !important;
+    }
+    .spec-accordion .accordion-button:not(.collapsed) {
+        background: linear-gradient(135deg,#e8f0fe,#ddf4ff);
+        color: #0d6efd;
+    }
+    .spec-accordion .accordion-button:hover { background: #edf1fb; }
+    .spec-accordion .accordion-button::after {
+        /* Bootstrap default arrow – keep it, just tint it */
+        filter: none;
+        transition: transform .3s ease;
+    }
+    .spec-accordion .accordion-button:not(.collapsed)::after {
+        filter: invert(38%) sepia(100%) saturate(1200%) hue-rotate(202deg) brightness(95%);
+    }
+    .spec-accordion .accordion-icon {
+        width: 34px; height: 34px;
+        border-radius: 10px;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+    .spec-accordion .accordion-body {
+        background: #fff;
+        color: #374151;
+        font-size: .95rem;
+        line-height: 1.7;
+        padding: 18px 22px 18px 68px;
+    }
+    .spec-accordion .accordion-body.empty-spec {
+        color: #aaa;
+        font-style: italic;
+    }
+    .spec-accordion .accordion-collapse { transition: height .32s cubic-bezier(.4,0,.2,1); }
+
+    /* ── Tab panel ── */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Highlight open item ── */
+    .spec-accordion .accordion-item:has(.accordion-button:not(.collapsed)) {
+        border-left: 4px solid #0d6efd;
+    }
+</style>
+
+<div class="container py-5 animate-in">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index" class="text-decoration-none">@LocalizationHelper.T("Home")</a></li>
+            <li class="breadcrumb-item"><a asp-action="Index" class="text-decoration-none">@LocalizationHelper.T("Products")</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@Model.ProductName</li>
+        </ol>
+    </nav>
+
+    <div class="row mt-4">
+        <!-- Product Image Carousel -->
+        <div class="col-md-6 mb-4">
+            @{
+                // Build image list: main image first, then additional images
+                var galleryImages = new List<string>();
+                if (!string.IsNullOrEmpty(Model.ImageUrl))
+                    galleryImages.Add(Model.ImageUrl);
+                if (!string.IsNullOrEmpty(Model.AdditionalImages))
+                    galleryImages.AddRange(Model.AdditionalImages.Split(',', StringSplitOptions.RemoveEmptyEntries));
+            }
+
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-3">
+                @if (galleryImages.Count > 1)
+                {
+                    <!-- Full carousel when multiple images -->
+                    <div id="productCarousel" class="carousel slide" data-bs-ride="false">
+                        <!-- Indicators (dots) -->
+                        <div class="carousel-indicators" style="bottom:-28px;">
+                            @for (int ci = 0; ci < galleryImages.Count; ci++)
+                            {
+                                <button type="button" data-bs-target="#productCarousel" data-bs-slide-to="@ci"
+                                        class="@(ci == 0 ? "active" : "")"
+                                        style="background:#0d6efd; width:8px; height:8px; border-radius:50%; border:none;"
+                                        aria-label="Slide @(ci+1)"></button>
+                            }
+                        </div>
+                        <div class="carousel-inner">
+                            @for (int ci = 0; ci < galleryImages.Count; ci++)
+                            {
+                                <div class="carousel-item @(ci == 0 ? "active" : "")" data-img-src="@Url.Content("~/images/" + galleryImages[ci])">
+                                    <div class="d-flex justify-content-center align-items-center bg-white" style="height:460px;">
+                                        <img src="@Url.Content("~/images/" + galleryImages[ci])"
+                                             class="img-fluid" style="max-height:440px; object-fit:contain;"
+                                             alt="@Model.ProductName slide @(ci+1)" />
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <!-- Prev/Next arrows -->
+                        <button class="carousel-control-prev" type="button" data-bs-target="#productCarousel" data-bs-slide="prev"
+                                style="width:40px; background:rgba(0,0,0,.15); border-radius:0 4px 4px 0;">
+                            <span class="carousel-control-prev-icon"></span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#productCarousel" data-bs-slide="next"
+                                style="width:40px; background:rgba(0,0,0,.15); border-radius:4px 0 0 4px;">
+                            <span class="carousel-control-next-icon"></span>
+                        </button>
+                    </div>
+                    <!-- Thumbnail strip -->
+                    <div class="d-flex gap-2 p-2 overflow-auto mt-6" id="thumbnailStrip" style="margin-top:30px;">
+                        @for (int ci = 0; ci < galleryImages.Count; ci++)
+                        {
+                            <div class="flex-shrink-0 thumbnail-item @(ci == 0 ? "thumb-active" : "")"
+                                 data-slide-to="@ci" style="cursor:pointer;">
+                                <img src="@Url.Content("~/images/" + galleryImages[ci])"
+                                     style="width:64px; height:64px; object-fit:cover; border-radius:8px;
+                                            border: 2px solid @(ci == 0 ? "#0d6efd" : "#dee2e6");"
+                                     class="thumb-img" alt="thumb @ci" />
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <!-- Single image fallback -->
+                    <div class="p-4 d-flex justify-content-center bg-white" style="height:460px;">
+                        @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                        {
+                            <img id="mainProductImage"
+                                 src="@Url.Content("~/images/" + Model.ImageUrl)"
+                                 asp-append-version="true"
+                                 alt="@Model.ProductName"
+                                 class="img-fluid" style="object-fit:contain;"
+                                 data-original-src="@Url.Content("~/images/" + Model.ImageUrl)" />
+                        }
+                        else
+                        {
+                            <img id="mainProductImage"
+                                 src="https://via.placeholder.com/600x500?text=No+Image"
+                                 class="img-fluid"
+                                 data-original-src="https://via.placeholder.com/600x500?text=No+Image" />
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- ══════════════════════════════════════════
+                 THÔNG TIN SẢN PHẨM (Moved to Left Column)
+                 ══════════════════════════════════════════ -->
+            <div class="mt-4">
+                <!-- Tab buttons -->
+                <div class="spec-tabs">
+                    <button class="spec-tab-btn active" id="tabBtnSpecs" onclick="switchTab('specs')">
+                        <i class="bi bi-cpu me-2"></i>@LocalizationHelper.T("Thông số kỹ thuật")
+                    </button>
+                    <button class="spec-tab-btn" id="tabBtnInfo" onclick="switchTab('info')">
+                        <i class="bi bi-info-circle me-2"></i>@LocalizationHelper.T("Thông tin sản phẩm")
+                    </button>
+                </div>
+
+                <!-- Tab 1: Thông số kỹ thuật -->
+                <div class="tab-panel active" id="panelSpecs">
+                    <div class="accordion spec-accordion" id="productSpecs">
+                        @{
+                            var specGroups = Model.ProductSpecs?
+                                .Where(ps => !string.IsNullOrWhiteSpace(ps.Value))
+                                .GroupBy(ps => ps.SpecKey.Group)
+                                .OrderBy(g => g.Key.DisplayOrder)
+                                .ToList();
+                        }
+                        
+                        @if (specGroups != null && specGroups.Any())
+                        {
+                            int i = 0;
+                            string[] iconClasses = { "bi-cpu-fill", "bi-gpu-card", "bi-memory", "bi-display", "bi-usb-plug-fill", "bi-battery-charging" };
+                            string[] colorClasses = { "text-primary bg-primary", "text-purple", "text-warning bg-warning", "text-info bg-info", "text-success bg-success", "text-danger bg-danger" };
+                            
+                            foreach (var group in specGroups)
+                            {
+                                string collapseId = "collapseGroup" + i;
+                                string headingId = "headingGroup" + i;
+                                bool isFirst = i == 0;
+                                string iconClass = iconClasses[i % iconClasses.Length];
+                                string colorClass = colorClasses[i % colorClasses.Length];
+                                
+                                <div class="accordion-item shadow-sm mb-2 rounded-3 overflow-hidden">
+                                    <h2 class="accordion-header" id="@headingId">
+                                        <button class="accordion-button @(isFirst ? "" : "collapsed")" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#@collapseId"
+                                                aria-expanded="@(isFirst ? "true" : "false")" aria-controls="@collapseId">
+                                            <span class="accordion-icon @colorClass bg-opacity-10 me-2" @(colorClass.Contains("purple") ? "style=color:#7c3aed;background:#f0e9ff;" : "")>
+                                                <i class="bi @iconClass"></i>
+                                            </span>
+                                            @group.Key.Name
+                                        </button>
+                                    </h2>
+                                    <div id="@collapseId" class="accordion-collapse collapse @(isFirst ? "show" : "")"
+                                         aria-labelledby="@headingId" data-bs-parent="#productSpecs">
+                                        <div class="accordion-body">
+                                            @foreach (var spec in group.OrderBy(s => s.SpecKey.DisplayOrder))
+                                            {
+                                                <div class="mb-2"><strong>@spec.SpecKey.Name:</strong> @spec.Value</div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                i++;
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center text-muted fst-italic py-4 bg-white border rounded-4">
+                                Chưa có thông số kỹ thuật.
+                            </div>
+                        }
+                    </div><!-- /accordion -->
+                </div><!-- /panelSpecs -->
+
+                <!-- Tab 2: Thông tin sản phẩm -->
+                <div class="tab-panel" id="panelInfo">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 bg-light">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-info-circle-fill text-primary me-2"></i>@LocalizationHelper.T("Thông tin sản phẩm")</h5>
+                        @if (!string.IsNullOrEmpty(Model.Description))
+                        {
+                            <p class="text-muted mb-0" style="line-height:1.8;">@Model.Description</p>
+                        }
+                        else
+                        {
+                            <p class="text-muted fst-italic mb-0">Chưa có thông tin mô tả sản phẩm.</p>
+                        }
+                    </div>
+                </div><!-- /panelInfo -->
+            </div>
+        </div>
+
+        <!-- Product Info -->
+        <div class="col-md-6 ps-md-5">
+            <span class="badge badge-category mb-3 fs-6">@Model.Category?.CategoryName</span>
+            <h1 class="fw-bold mb-3" style="font-size:2.5rem;">@Model.ProductName</h1>
+
+
+            <div class="mb-4">
+                @if (Model.DiscountPercent > 0)
+                {
+                    <div class="mb-1">
+                        <span class="text-decoration-line-through text-muted fs-5 me-2">@LocalizationHelper.FormatCurrency(Model.Price)</span>
+                        <span class="badge bg-danger fs-6 px-3 py-2">-@Model.DiscountPercent.ToString("0")%</span>
+                    </div>
+                    <span class="fw-bold text-danger display-5">@LocalizationHelper.FormatCurrency(Model.FinalPrice)</span>
+                    <div class="mt-1 text-success small fw-semibold">
+                        <i class="bi bi-check-circle-fill me-1"></i>Tiết kiệm @LocalizationHelper.FormatCurrency(Model.Price - Model.FinalPrice)
+                    </div>
+                }
+                else
+                {
+                    <span class="fw-bold product-price display-5">@LocalizationHelper.FormatCurrency(Model.FinalPrice)</span>
+                }
+            </div>
+
+            <div class="mb-4">
+                <span class="fw-bold text-dark me-3">@LocalizationHelper.T("Select a color"):</span>
+                <div class="d-flex gap-3 mt-2" id="colorPicker">
+                    @if (Model.ProductColors != null && Model.ProductColors.Any())
+                    {
+                        foreach (var pc in Model.ProductColors)
+                        {
+                            <div class="color-option-wrapper text-center">
+                                <span class="color-circle @(pc.Quantity == 0 ? "out-of-stock" : "")"
+                                      style="background-color:@pc.ColorCode"
+                                      data-id="@pc.Id"
+                                      data-qty="@pc.Quantity"
+                                      data-name="@pc.ColorName"
+                                      data-image="@(!string.IsNullOrEmpty(pc.ImageUrl) ? Url.Content("~/images/" + pc.ImageUrl) : "")"
+                                      title="@pc.ColorName (@pc.Quantity left)"></span>
+                                <div class="small text-muted mt-1" style="font-size:.7rem;">@LocalizationHelper.T(pc.ColorName)</div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+            <div id="colorSelectionInfo" class="mt-2 text-primary fw-bold small">@LocalizationHelper.T("Select a color to continue")</div>
+
+            <div class="d-flex align-items-center mb-4 mt-3">
+                <div class="me-3" id="availabilityDisplay">
+                    <span class="fw-bold text-dark">@LocalizationHelper.T("Availability"):</span>
+                    <span class="text-muted fst-italic">@LocalizationHelper.T("Select a color")</span>
+                </div>
+            </div>
+
+            <form asp-controller="Cart" asp-action="AddToCart" method="post" id="addToCartForm"
+                  class="d-flex align-items-center mb-5 p-4 bg-light rounded-4 shadow-sm opacity-50"
+                  style="pointer-events:none;">
+                <input type="hidden" name="productId" value="@Model.ProductId" />
+                <input type="hidden" name="colorId" id="selectedColorId" value="" />
+                <div class="me-4 flex-grow-1">
+                    <label class="form-label fw-bold mb-2">@LocalizationHelper.T("Quantity")</label>
+                    <input type="number" name="quantity" id="orderQuantity" class="form-control form-control-lg" value="1" min="1" disabled />
+                </div>
+                <div class="mt-4 pt-1">
+                    <button type="submit" id="addToCartBtn" class="btn btn-gradient btn-lg px-5 shadow" disabled>
+                        <i class="bi bi-cart-plus me-2"></i>@LocalizationHelper.T("Add to Cart")
+                    </button>
+                </div>
+            </form>
+
+            <hr />
+
+
+            <hr />
+
+            <!-- Reviews Section -->
+            <div class="mt-5">
+                <h4 class="fw-bold mb-4">@LocalizationHelper.T("Customer Reviews")</h4>
+                @if (Model.Reviews != null && Model.Reviews.Any())
+                {
+                    <div class="list-group list-group-flush mb-4">
+                        @foreach (var review in Model.Reviews)
+                        {
+                            <div class="list-group-item bg-transparent px-0 py-3">
+                                <div class="d-flex w-100 justify-content-between mb-2">
+                                    <h6 class="mb-1 fw-bold"><i class="bi bi-person-circle"></i> @review.User?.FullName</h6>
+                                    <div class="text-warning">
+                                        @for (int i = 0; i < review.Rating; i++) { <i class="bi bi-star-fill"></i> }
+                                        @for (int i = review.Rating; i < 5; i++) { <i class="bi bi-star"></i> }
+                                    </div>
+                                </div>
+                                <p class="mb-1 text-muted">@review.Comment</p>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4 bg-light rounded-4 mb-4">
+                        <i class="bi bi-chat-left-text text-muted mb-2" style="font-size:2rem;"></i>
+                        <p class="text-muted mb-0">@LocalizationHelper.T("No reviews yet. Be the first to review this product!")</p>
+                    </div>
+                }
+
+                @if (User.Identity != null && User.Identity.IsAuthenticated)
+                {
+                    <div class="card shadow-sm border-0 rounded-4 mt-4">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-3">@LocalizationHelper.T("Write a Review")</h5>
+                            <form asp-controller="Review" asp-action="Create" method="post">
+                                <input type="hidden" name="productId" value="@Model.ProductId" />
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">@LocalizationHelper.T("Rating")</label>
+                                    <select name="rating" class="form-select bg-light border-0">
+                                        <option value="5">5 - @LocalizationHelper.T("Excellent")</option>
+                                        <option value="4">4 - Rất tốt</option>
+                                        <option value="3">3 - @LocalizationHelper.T("Good")</option>
+                                        <option value="2">2 - Bình thường</option>
+                                        <option value="1">1 - Tệ</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">@LocalizationHelper.T("Comment")</label>
+                                    <textarea name="comment" class="form-control bg-light border-0" rows="3" required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary rounded-pill px-4">@LocalizationHelper.T("Submit Review")</button>
+                            </form>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info border-0 shadow-sm rounded-4 mt-4">
+                        <i class="bi bi-info-circle me-2"></i> Vui lòng <a asp-controller="Account" asp-action="Login" class="fw-bold">đăng nhập</a> để đánh giá.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ── Tab switching ──
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.spec-tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+            document.getElementById('tabBtn' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+        }
+
+        // ── Carousel + Thumbnail strip ──
+        document.addEventListener('DOMContentLoaded', function () {
+            const carousel = document.getElementById('productCarousel');
+            const thumbItems = document.querySelectorAll('.thumbnail-item');
+
+            if (carousel && thumbItems.length) {
+                // Thumbnail click → go to slide
+                thumbItems.forEach(thumb => {
+                    thumb.addEventListener('click', function () {
+                        const slideTo = parseInt(this.dataset.slideTo);
+                        const bsCarousel = bootstrap.Carousel.getOrCreateInstance(carousel);
+                        bsCarousel.to(slideTo);
+                    });
+                });
+
+                // Carousel slide event → highlight active thumbnail
+                carousel.addEventListener('slid.bs.carousel', function (e) {
+                    thumbItems.forEach(t => {
+                        const isActive = parseInt(t.dataset.slideTo) === e.to;
+                        t.querySelector('.thumb-img').style.border =
+                            isActive ? '2px solid #0d6efd' : '2px solid #dee2e6';
+                        t.classList.toggle('thumb-active', isActive);
+                    });
+                });
+            }
+
+            // ── Color picker ──
+            const colorCircles = document.querySelectorAll('.color-circle');
+            const selectedColorIdInput = document.getElementById('selectedColorId');
+            const colorSelectionInfo   = document.getElementById('colorSelectionInfo');
+            const availabilityDisplay  = document.getElementById('availabilityDisplay');
+            const addToCartForm        = document.getElementById('addToCartForm');
+            const addToCartBtn         = document.getElementById('addToCartBtn');
+            const orderQuantityInput   = document.getElementById('orderQuantity');
+
+            colorCircles.forEach(circle => {
+                circle.addEventListener('click', function () {
+                    const qty = parseInt(this.dataset.qty);
+                    if (qty <= 0) return;
+
+                    colorCircles.forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+
+                    selectedColorIdInput.value = this.dataset.id;
+                    orderQuantityInput.max = qty;
+                    orderQuantityInput.disabled = false;
+
+                    addToCartForm.classList.remove('opacity-50');
+                    addToCartForm.style.pointerEvents = 'auto';
+                    addToCartBtn.disabled = false;
+
+                    colorSelectionInfo.innerHTML = `Đã chọn: <span class="text-dark">${this.dataset.name}</span>`;
+                    availabilityDisplay.innerHTML = `
+                        <span class="fw-bold text-dark">@LocalizationHelper.T("Availability"):</span>
+                        <span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Có hàng (Còn ${qty})</span>
+                    `;
+
+                    // When a color variant image exists, slide carousel to slide 0
+                    // and swap its src to the variant image
+                    const variantImg = this.dataset.image;
+                    if (carousel) {
+                        const firstSlide = carousel.querySelector('.carousel-item:first-child img');
+                        if (firstSlide && variantImg) {
+                            firstSlide.src = variantImg;
+                            // Update first thumbnail too
+                            const firstThumb = document.querySelector('.thumbnail-item[data-slide-to="0"] .thumb-img');
+                            if (firstThumb) firstThumb.src = variantImg;
+                        }
+                        bootstrap.Carousel.getOrCreateInstance(carousel).to(0);
+                    } else {
+                        // Fallback for single-image (no carousel)
+                        const mainImg = document.getElementById('mainProductImage');
+                        if (mainImg) {
+                            mainImg.src = variantImg || mainImg.dataset.originalSrc;
+                        }
+                    }
+                });
+            });
+
+            if (addToCartForm) {
+                addToCartForm.addEventListener('submit', function (e) {
+                    if (!selectedColorIdInput.value) {
+                        e.preventDefault();
+                        alert("Vui lòng chọn màu trước khi thêm vào giỏ hàng!");
+                    }
+                });
+            }
+        });
+    </script>
+}

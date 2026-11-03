@@ -1,0 +1,54 @@
+﻿@model IEnumerable<NewComputerStore.Models.ActivityLog>
+@{
+    ViewData["Title"] = "Nhật ký hệ thống";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    int currentPage = ViewBag.CurrentPage;
+    int totalPages = ViewBag.TotalPages;
+}
+<div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Nhật ký hệ thống</h1>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-sm align-middle">
+        <thead>
+            <tr>
+                <th style="width: 200px;">Thời gian</th>
+                <th style="width: 250px;">Email người dùng</th>
+                <th>Mô tả hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach(var item in Model) {
+                <tr>
+                    <td>@item.Time.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    <td class="fw-bold">@item.UserEmail</td>
+                    <td>@item.Action</td>
+                </tr>
+            }
+            @if(!Model.Any()) {
+                <tr>
+                    <td colspan="3" class="text-center py-4 text-muted">Chưa có nhật ký hoạt động nào.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <!-- Pagination -->
+    @if(totalPages > 1) {
+        <nav>
+            <ul class="pagination pagination-sm justify-content-center mt-4">
+                <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                    <a class="page-link" asp-action="Logs" asp-route-page="@(currentPage - 1)">Trước</a>
+                </li>
+                @for (int i = 1; i <= totalPages; i++) {
+                    <li class="page-item @(i == currentPage ? "active" : "")">
+                        <a class="page-link" asp-action="Logs" asp-route-page="@i">@i</a>
+                    </li>
+                }
+                <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                    <a class="page-link" asp-action="Logs" asp-route-page="@(currentPage + 1)">Tiếp</a>
+                </li>
+            </ul>
+        </nav>
+    }
+</div>

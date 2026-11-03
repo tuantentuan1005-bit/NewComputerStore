@@ -1,0 +1,304 @@
+@using NewComputerStore.Helpers
+@model NewComputerStore.ViewModels.ProductViewModel
+
+@{
+    ViewData["Title"] = LocalizationHelper.T("Create Product");
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<h2 class="mt-4 mb-4">@LocalizationHelper.T("Create Product")</h2>
+
+<div class="card shadow-sm border-0 rounded-4 col-md-8 mb-5">
+    <div class="card-body p-4">
+        <form asp-action="Create" method="post" enctype="multipart/form-data">
+            <div asp-validation-summary="All" class="text-danger mb-3"></div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">@LocalizationHelper.T("Product Name")</label>
+                    <input asp-for="ProductName" class="form-control" />
+                    <span asp-validation-for="ProductName" class="text-danger"></span>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">@LocalizationHelper.T("Category")</label>
+                    <select asp-for="CategoryId" class="form-select" asp-items="ViewBag.CategoryId"></select>
+                    <span asp-validation-for="CategoryId" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">@LocalizationHelper.T("Price")</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input asp-for="Price" class="form-control" type="number" step="0.01" />
+                    </div>
+                    <span asp-validation-for="Price" class="text-danger"></span>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">@LocalizationHelper.T("Quantity")</label>
+                    <input asp-for="Quantity" class="form-control" type="number" />
+                    <span asp-validation-for="Quantity" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">@LocalizationHelper.T("Description")</label>
+                <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+
+            <!-- ── Thông số kỹ thuật (Manual) ── -->
+            <div class="card border-0 bg-light rounded-4 mb-4">
+                <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between pt-3 pb-0">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-cpu text-primary fs-5"></i>
+                        <h6 class="fw-bold mb-0">@LocalizationHelper.T("Thông số kỹ thuật")</h6>
+                    </div>
+                    <button type="button" id="addCustomSpecBtn" class="btn btn-sm btn-primary rounded-pill px-3">
+                        <i class="bi bi-plus-circle me-1"></i>@LocalizationHelper.T("Add Spec")
+                    </button>
+                </div>
+                <div class="card-body pt-3">
+                    <div id="customSpecsContainer">
+                        <!-- Custom spec rows will be added here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="card bg-light border-0 rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0">@LocalizationHelper.T("Product Colors & Inventory")</h5>
+                        <button type="button" id="addColorBtn" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                            <i class="bi bi-plus-circle me-1"></i>@LocalizationHelper.T("Add Variant")
+                        </button>
+                    </div>
+                    
+                    <div id="colorContainer">
+                        <!-- Dynamic color rows will be added here -->
+                    </div>
+                    
+                    <div class="mt-2">
+                        <span asp-validation-for="ProductColors" class="text-danger d-block mb-1"></span>
+                        <div class="text-info small">
+                            <i class="bi bi-info-circle me-1"></i> @LocalizationHelper.T("You must add at least one color variant.")
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-bold">@LocalizationHelper.T("Upload Image")</label>
+                <input name="ImageUpload" class="form-control" type="file" accept="image/*" id="mainImageInput" />
+                <small class="text-muted">Ảnh đại diện chính của sản phẩm.</small>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-bold">
+                    <i class="bi bi-images me-1 text-primary"></i> Ảnh bổ sung (Gallery / Carousel)
+                </label>
+                <!-- Drop zone -->
+                <div id="dropZone" class="border border-2 border-dashed rounded-4 p-4 text-center bg-light mb-3"
+                     style="cursor:pointer; border-color:#0d6efd55 !important; transition: all .2s;">
+                    <i class="bi bi-cloud-upload text-primary" style="font-size:2.5rem;"></i>
+                    <p class="text-muted mt-2 mb-1">Kéo thả ảnh vào đây hoặc <span class="text-primary fw-bold">nhấn để chọn</span></p>
+                    <small class="text-muted">Hỗ trợ nhiều ảnh cùng lúc (JPG, PNG, WEBP)</small>
+                    <input type="file" name="AdditionalImageUploads" id="additionalImagesInput"
+                           accept="image/*" multiple class="d-none" />
+                </div>
+                <!-- Preview grid -->
+                <div id="additionalImagesPreview" class="row g-2"></div>
+            </div>
+
+            <div class="d-flex justify-content-between pt-3 border-top">
+                <a asp-action="AdminIndex" class="btn btn-secondary text-white rounded-pill px-4"><i class="bi bi-arrow-left me-1"></i>@LocalizationHelper.T("Back to List")</a>
+                <button type="submit" class="btn btn-primary rounded-pill px-4"><i class="bi bi-save me-1"></i>@LocalizationHelper.T("Create Product")</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        const colorContainer = document.getElementById('colorContainer');
+        const addColorBtn = document.getElementById('addColorBtn');
+
+        function addColorRow() {
+            const index = colorContainer.querySelectorAll('.color-row').length;
+            const row = document.createElement('div');
+            row.className = 'row mb-3 align-items-end border-bottom pb-3 color-row';
+            row.innerHTML = `
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">@LocalizationHelper.T("HEX")</label>
+                    <input type="color" name="ProductColors[${index}].ColorCode" class="form-control form-control-color w-100" value="#000000" title="Choose color">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">@LocalizationHelper.T("Name (Red, Blue...)")</label>
+                    <input type="text" name="ProductColors[${index}].ColorName" class="form-control" placeholder="e.g. Midnight Black" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">@LocalizationHelper.T("Stock")</label>
+                    <input type="number" name="ProductColors[${index}].Quantity" class="form-control" value="0" min="0" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">@LocalizationHelper.T("Variant Image")</label>
+                    <input type="file" name="ProductColors[${index}].ColorImage" class="form-control form-control-sm" accept="image/*">
+                </div>
+                <div class="col-md-1 text-end">
+                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill remove-color-btn">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            `;
+            colorContainer.appendChild(row);
+            
+            row.querySelector('.remove-color-btn').addEventListener('click', function() {
+                row.remove();
+                reindexColors();
+            });
+        }
+
+        function reindexColors() {
+            const rows = colorContainer.querySelectorAll('.color-row');
+            rows.forEach((row, index) => {
+                row.querySelectorAll('input').forEach(input => {
+                    const name = input.getAttribute('name');
+                    if (name) {
+                        input.setAttribute('name', name.replace(/ProductColors\[\d+\]/, `ProductColors[${index}]`));
+                    }
+                });
+            });
+        }
+
+        // --- Custom Specs Logic ---
+        const customSpecsContainer = document.getElementById('customSpecsContainer');
+        const addCustomSpecBtn = document.getElementById('addCustomSpecBtn');
+
+        function addCustomSpecRow() {
+            const index = customSpecsContainer.querySelectorAll('.custom-spec-row').length;
+            const row = document.createElement('div');
+            row.className = 'row mb-2 custom-spec-row align-items-end';
+            row.innerHTML = `
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold">@LocalizationHelper.T("Tên thông số")</label>
+                    <input type="text" name="CustomSpecs[${index}].Key" class="form-control" placeholder="@LocalizationHelper.T("Ví dụ: Tần số quét")" required>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold">@LocalizationHelper.T("Giá trị")</label>
+                    <input type="text" name="CustomSpecs[${index}].Value" class="form-control" placeholder="@LocalizationHelper.T("Ví dụ: 144Hz")" required>
+                </div>
+                <div class="col-md-2 text-end">
+                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill remove-spec-btn">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            `;
+            customSpecsContainer.appendChild(row);
+            
+            row.querySelector('.remove-spec-btn').addEventListener('click', function() {
+                row.remove();
+                reindexCustomSpecs();
+            });
+        }
+
+        function reindexCustomSpecs() {
+            const rows = customSpecsContainer.querySelectorAll('.custom-spec-row');
+            rows.forEach((row, index) => {
+                row.querySelectorAll('input').forEach(input => {
+                    const name = input.getAttribute('name');
+                    if (name) {
+                        input.setAttribute('name', name.replace(/CustomSpecs\[\d+\]/, `CustomSpecs[${index}]`));
+                    }
+                });
+            });
+        }
+
+        addCustomSpecBtn.addEventListener('click', addCustomSpecRow);
+        addColorBtn.addEventListener('click', addColorRow);
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (colorContainer.children.length === 0) {
+                addColorRow();
+            }
+        });
+
+        // ── Multi-image upload with drop zone ──
+        (function() {
+            const dropZone   = document.getElementById('dropZone');
+            const fileInput  = document.getElementById('additionalImagesInput');
+            const preview    = document.getElementById('additionalImagesPreview');
+            let selectedFiles = []; // DataTransfer trick to accumulate files
+
+            dropZone.addEventListener('click', () => fileInput.click());
+
+            dropZone.addEventListener('dragover', e => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#0d6efd';
+                dropZone.style.background  = '#eef3ff';
+            });
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.style.borderColor = '#0d6efd55';
+                dropZone.style.background  = '';
+            });
+            dropZone.addEventListener('drop', e => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#0d6efd55';
+                dropZone.style.background  = '';
+                addFiles(e.dataTransfer.files);
+            });
+
+            fileInput.addEventListener('change', () => {
+                addFiles(fileInput.files);
+                fileInput.value = ''; // reset so same file can be re-added
+            });
+
+            function addFiles(files) {
+                Array.from(files).forEach(file => {
+                    if (!file.type.startsWith('image/')) return;
+                    selectedFiles.push(file);
+                    renderPreview(file, selectedFiles.length - 1);
+                });
+                syncFileInput();
+            }
+
+            function renderPreview(file, idx) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const col = document.createElement('div');
+                    col.className = 'col-6 col-md-3 position-relative';
+                    col.dataset.idx = idx;
+                    col.innerHTML = `
+                        <div class="rounded-3 overflow-hidden border shadow-sm" style="aspect-ratio:1; background:#f8f9fa;">
+                            <img src="${e.target.result}" class="w-100 h-100" style="object-fit:cover;">
+                        </div>
+                        <button type="button" class="btn btn-danger btn-sm rounded-circle position-absolute"
+                                style="top:6px;right:12px;width:26px;height:26px;padding:0;line-height:1;"
+                                onclick="removeAdditionalImage(${idx})">
+                            <i class="bi bi-x" style="font-size:.85rem;"></i>
+                        </button>
+                        <div class="text-truncate small text-muted mt-1 px-1">${file.name}</div>`;
+                    preview.appendChild(col);
+                };
+                reader.readAsDataURL(file);
+            }
+
+            window.removeAdditionalImage = function(idx) {
+                selectedFiles[idx] = null; // mark deleted
+                const col = preview.querySelector(`[data-idx="${idx}"]`);
+                if (col) col.remove();
+                syncFileInput();
+            };
+
+            function syncFileInput() {
+                // Rebuild a DataTransfer with only non-null files
+                const dt = new DataTransfer();
+                selectedFiles.filter(f => f !== null).forEach(f => dt.items.add(f));
+                fileInput.files = dt.files;
+            }
+        })();
+    </script>
+}

@@ -1,0 +1,195 @@
+@model NewComputerStore.ViewModels.CheckoutViewModel
+
+@{
+    ViewData["Title"] = LocalizationHelper.T("Checkout");
+    var cart = ViewBag.Cart as List<NewComputerStore.Models.CartItem>;
+}
+
+<div class="container py-5 animate-in">
+    <div class="row">
+        <!-- Main Checkout Form -->
+        <div class="col-lg-7 mb-4">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4 p-md-5">
+                    <h2 class="fw-bold mb-4"><i class="bi bi-geo-alt text-primary me-2"></i>@LocalizationHelper.T("Shipping Information")</h2>
+                    <form asp-action="Checkout" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label asp-for="FullName" class="form-label fw-semibold">@LocalizationHelper.T("Receiver's Full Name")</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-person"></i></span>
+                                    <input asp-for="FullName" class="form-control bg-light" placeholder="@LocalizationHelper.T("Enter full name")" />
+                                </div>
+                                <span asp-validation-for="FullName" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6 mb-3 mb-md-0">
+                                <label asp-for="Email" class="form-label fw-semibold">@LocalizationHelper.T("Email Address")</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope"></i></span>
+                                    <input asp-for="Email" class="form-control" readonly placeholder="email@example.com" />
+                                </div>
+                                <span asp-validation-for="Email" class="text-danger small"></span>
+                                <div class="form-text mt-1">@LocalizationHelper.T("Used for order confirmation.")</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Phone" class="form-label fw-semibold">@LocalizationHelper.T("Phone Number")</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-telephone"></i></span>
+                                    <input asp-for="Phone" class="form-control" placeholder="0123 456 789" />
+                                </div>
+                                <span asp-validation-for="Phone" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Address" class="form-label fw-semibold">@LocalizationHelper.T("Delivery Address")</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0 align-items-start pt-2"><i class="bi bi-building"></i></span>
+                                <textarea asp-for="Address" class="form-control" rows="3" placeholder="@LocalizationHelper.T("Enter your full street address, city, etc.")"></textarea>
+                            </div>
+                            <span asp-validation-for="Address" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Payment Method Selection -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Phương Thức Thanh Toán</label>
+                            <div class="d-flex flex-column gap-3">
+                                <label class="d-flex align-items-center gap-3 p-3 border rounded-3 cursor-pointer payment-option" id="label-cod" style="cursor:pointer;">
+                                    <input type="radio" name="PaymentMethod" value="COD" id="pay-cod" checked class="form-check-input mt-0" style="width:20px;height:20px;" />
+                                    <div>
+                                        <div class="fw-bold"><i class="bi bi-truck me-2 text-primary"></i>Thanh toán khi nhận hàng (COD)</div>
+                                        <small class="text-muted">Trả tiền mặt khi nhận được hàng</small>
+                                    </div>
+                                </label>
+                                <label class="d-flex align-items-center gap-3 p-3 border rounded-3 cursor-pointer payment-option" id="label-qr" style="cursor:pointer;">
+                                    <input type="radio" name="PaymentMethod" value="QR" id="pay-qr" class="form-check-input mt-0" style="width:20px;height:20px;" />
+                                    <div>
+                                        <div class="fw-bold"><i class="bi bi-qr-code me-2 text-success"></i>Thanh toán QR (Chuyển khoản)</div>
+                                        <small class="text-muted">Quét mã QR chuyển khoản ngân hàng</small>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="btn-place-order" class="btn btn-primary btn-lg w-100 rounded-pill fw-bold shadow-sm py-3 mt-2">
+                            <span id="btn-order-text">@LocalizationHelper.T("Place Order") <i class="bi bi-check2-circle ms-2"></i></span>
+                            <span id="btn-order-loading" class="d-none">
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                Đang xử lý...
+                            </span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="col-lg-5">
+            <div class="card shadow-lg border-0 rounded-4 sticky-top" style="top: 20px;">
+                <div class="card-body p-4 p-md-5">
+                    <h4 class="fw-bold mb-4">@LocalizationHelper.T("Order Summary")</h4>
+                    
+                    <div class="order-items mb-4" style="max-height: 400px; overflow-y: auto;">
+                        @foreach (var item in cart)
+                        {
+                            <div class="d-flex align-items-center mb-3 border-bottom pb-3">
+                                <div class="bg-light rounded p-2 me-3 d-flex align-items-center justify-content-center overflow-hidden" style="width: 50px; height: 50px; flex-shrink: 0;">
+                                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                    {
+                                        <img src="@Url.Content("~/images/" + item.ImageUrl)" alt="@item.ProductName" class="img-fluid" style="max-height: 100%; object-fit: contain;">
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-box-seam text-primary"></i>
+                                    }
+                                </div>
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <h6 class="mb-0 fw-bold text-truncate">@item.ProductName</h6>
+                                    @if (item.ColorId.HasValue)
+                                    {
+                                        <div class="small text-muted mb-1">
+                                            @LocalizationHelper.T("Màu:") @LocalizationHelper.T(item.ColorName)
+                                        </div>
+                                    }
+                                    <small class="text-muted">
+                                        @LocalizationHelper.T("Qty:") @item.Quantity × 
+                                        @if (item.DiscountPercent.HasValue && item.DiscountPercent > 0)
+                                        {
+                                            <span class="text-decoration-line-through me-1 small">@LocalizationHelper.FormatCurrency(item.OriginalPrice)</span>
+                                        }
+                                        <span class="fw-semibold text-danger">@LocalizationHelper.FormatCurrency(item.Price)</span>
+                                    </small>
+                                </div>
+                                <div class="text-end ms-2">
+                                    <span class="fw-bold text-primary">@LocalizationHelper.FormatCurrency(item.Total)</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="border-top pt-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">@LocalizationHelper.T("Subtotal")</span>
+                            <span class="fw-semibold">@LocalizationHelper.FormatCurrency(Model.TotalAmount)</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">@LocalizationHelper.T("Shipping Fee")</span>
+                            <span class="text-success fw-bold">@LocalizationHelper.T("FREE")</span>
+                        </div>
+                        <div class="d-flex justify-content-between mt-4 fs-4 fw-bold">
+                            <span>@LocalizationHelper.T("Grand Total")</span>
+                            <span class="text-primary">@LocalizationHelper.FormatCurrency(Model.TotalAmount)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4 px-3">
+                <a asp-controller="Cart" asp-action="Index" class="btn btn-outline-secondary w-100 rounded-pill fw-bold border-2">
+                    <i class="bi bi-arrow-left me-2"></i>@LocalizationHelper.T("Back to Cart")
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var form = document.querySelector('form[asp-action="Checkout"], form[action*="Checkout"]');
+            if (!form) {
+                // fallback: first form on page
+                form = document.querySelector('form');
+            }
+            if (!form) return;
+
+            var btn = document.getElementById('btn-place-order');
+            var btnText = document.getElementById('btn-order-text');
+            var btnLoading = document.getElementById('btn-order-loading');
+            var submitted = false;
+
+            form.addEventListener('submit', function (e) {
+                if (submitted) {
+                    // Block duplicate submission
+                    e.preventDefault();
+                    return false;
+                }
+
+                // Run client-side validation first
+                if (!form.checkValidity()) return;
+
+                // Mark as submitted and update UI
+                submitted = true;
+                btn.disabled = true;
+                btnText.classList.add('d-none');
+                btnLoading.classList.remove('d-none');
+            });
+        })();
+    </script>
+}

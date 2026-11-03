@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+@using NewComputerStore.Models
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Admin Dashboard</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <style>
+        /* ===== SIDEBAR ===== */
+        :root {
+            --sidebar-bg: #1a1a2e;
+            --sidebar-hover: #16213e;
+            --sidebar-active: #0f3460;
+            --sidebar-accent: #e94560;
+            --sidebar-text: #c8d6e5;
+            --sidebar-width: 240px;
+            --topbar-height: 56px;
+        }
+
+        body {
+            background: #f0f2f5 !important;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        /* ---- Top bar ---- */
+        .admin-topbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: var(--topbar-height);
+            background: #0d0d1a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.25rem 0 calc(var(--sidebar-width) + 1rem);
+            z-index: 1030;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            transition: padding-left .3s;
+        }
+
+        .topbar-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+            letter-spacing: .3px;
+        }
+
+        .topbar-actions a {
+            color: var(--sidebar-text);
+            text-decoration: none;
+            font-size: .875rem;
+            padding: 6px 14px;
+            border-radius: 6px;
+            transition: background .2s;
+        }
+        .topbar-actions a:hover { background: rgba(255,255,255,.08); }
+        .topbar-actions .btn-logout {
+            color: #ff6b6b;
+        }
+        .topbar-actions .btn-logout:hover { background: rgba(255,107,107,.12); }
+
+        /* ---- Sidebar ---- */
+        .admin-sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            top: 0; left: 0;
+            background: var(--sidebar-bg);
+            display: flex;
+            flex-direction: column;
+            z-index: 1040;
+            overflow-y: auto;
+            transition: width .3s, transform .3s;
+            box-shadow: 4px 0 24px rgba(0,0,0,.35);
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 20px;
+            height: var(--topbar-height);
+            background: #0d0d1a;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(255,255,255,.07);
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand .brand-icon {
+            width: 34px; height: 34px;
+            background: var(--sidebar-accent);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand .brand-name {
+            font-size: .95rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: .5px;
+        }
+
+        /* Nav section label */
+        .sidebar-label {
+            font-size: .65rem;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: rgba(200,214,229,.35);
+            padding: 20px 20px 6px;
+        }
+
+        /* Nav items */
+        .sidebar-nav {
+            list-style: none;
+            margin: 0;
+            padding: 8px 10px;
+            flex: 1;
+        }
+
+        .sidebar-nav li { margin: 2px 0; }
+
+        .sidebar-nav li a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 14px;
+            border-radius: 10px;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            font-size: .875rem;
+            font-weight: 500;
+            transition: background .2s, color .2s, transform .15s;
+            position: relative;
+        }
+
+        .sidebar-nav li a i {
+            font-size: 1.05rem;
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-nav li a:hover {
+            background: var(--sidebar-hover);
+            color: #fff;
+            transform: translateX(3px);
+        }
+
+        .sidebar-nav li a.active {
+            background: var(--sidebar-active);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(15,52,96,.5);
+        }
+
+        .sidebar-nav li a.active::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 25%; bottom: 25%;
+            width: 3px;
+            background: var(--sidebar-accent);
+            border-radius: 0 3px 3px 0;
+        }
+
+        /* Sidebar footer */
+        .sidebar-footer {
+            padding: 12px 10px;
+            border-top: 1px solid rgba(255,255,255,.07);
+        }
+
+        .sidebar-footer a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 14px;
+            border-radius: 10px;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            font-size: .85rem;
+            font-weight: 500;
+            transition: background .2s, color .2s;
+        }
+        .sidebar-footer a:hover { background: var(--sidebar-hover); color: #fff; }
+        .sidebar-footer .btn-logout-side { color: #ff6b6b !important; }
+        .sidebar-footer .btn-logout-side:hover { background: rgba(255,107,107,.12) !important; }
+
+        /* ---- Main content ---- */
+        .admin-wrapper {
+            display: flex;
+        }
+
+        .admin-main {
+            margin-left: var(--sidebar-width);
+            padding-top: calc(var(--topbar-height) + 24px);
+            padding-left: 28px;
+            padding-right: 28px;
+            padding-bottom: 32px;
+            min-height: 100vh;
+            flex: 1;
+            transition: margin-left .3s;
+        }
+
+        /* ---- Mobile sidebar toggle ---- */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.55);
+            z-index: 1035;
+        }
+
+        .btn-sidebar-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.3rem;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+
+        @@media (max-width: 768px) {
+            .admin-sidebar {
+                transform: translateX(-100%);
+            }
+            .admin-sidebar.open {
+                transform: translateX(0);
+            }
+            .sidebar-overlay.open {
+                display: block;
+            }
+            .admin-topbar {
+                padding-left: 1rem;
+            }
+            .admin-main {
+                margin-left: 0;
+            }
+            .btn-sidebar-toggle {
+                display: inline-flex;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<aside class="admin-sidebar" id="adminSidebar">
+    <!-- Brand -->
+    @{
+        var brandController = "Home";
+        var brandAction = "Index";
+        
+        if (User.IsInRole(UserRoles.Admin)) { brandController = "Admin"; brandAction = "Index"; }
+        else if (User.IsInRole(UserRoles.WarehouseManager)) { brandController = "Category"; brandAction = "Index"; }
+        else if (User.IsInRole(UserRoles.EmployeeManager)) { brandController = "StaffManagement"; brandAction = "Index"; }
+        else if (User.IsInRole(UserRoles.Staff)) { brandController = "Order"; brandAction = "AdminIndex"; }
+        else if (User.IsInRole(UserRoles.CustomerSupport)) { brandController = "CustomerSupport"; brandAction = "Dashboard"; }
+    }
+    <a class="sidebar-brand" asp-controller="@brandController" asp-action="@brandAction">
+        <div class="brand-icon"><i class="bi bi-cpu"></i></div>
+        <span class="brand-name">@(User.IsInRole(UserRoles.Admin) ? "Bảng quản trị" : (User.IsInRole(UserRoles.CustomerSupport) ? "Hỗ trợ khách hàng" : "Bảng nhân viên"))</span>
+    </a>
+
+    @if (User.IsInRole("Admin"))
+    {
+        <div class="sidebar-label">Quản trị hệ thống</div>
+        <ul class="sidebar-nav">
+            <li>
+                <a asp-controller="Admin" asp-action="Index"
+                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")">
+                    <i class="bi bi-speedometer2"></i> @LocalizationHelper.T("Dashboard")
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Admin" asp-action="Logs"
+                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" && ViewContext.RouteData.Values["action"]?.ToString() == "Logs" ? "active" : "")">
+                    <i class="bi bi-journal-text"></i> @LocalizationHelper.T("Activity Logs")
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Admin" asp-action="EmailLogs"
+                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" && ViewContext.RouteData.Values["action"]?.ToString() == "EmailLogs" ? "active" : "")">
+                    <i class="bi bi-envelope-paper"></i> Lịch sử gửi Email
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Admin" asp-action="EmailDiagnostics"
+                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" && ViewContext.RouteData.Values["action"]?.ToString() == "EmailDiagnostics" ? "active" : "")">
+                    <i class="bi bi-tools"></i> Email Diagnostics
+                </a>
+            </li>
+        </ul>
+    }
+
+    @if ((User.IsInRole("Admin") || User.IsInRole("WarehouseManager")) && !User.IsInRole(UserRoles.CustomerSupport))
+    {
+        <div class="sidebar-label">Quản lý kho</div>
+        <ul class="sidebar-nav">
+            <li>
+                <a asp-controller="Category" asp-action="Index"
+                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Category" ? "active" : "")">
+                    <i class="bi bi-tags"></i> @LocalizationHelper.T("Categories")
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Product" asp-action="AdminIndex"
+                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Product" ? "active" : "")">
+                    <i class="bi bi-box-seam"></i> @LocalizationHelper.T("Products")
+                </a>
+            </li>
+            <li>
+                <a asp-controller="SlowSellingProducts" asp-action="Index"
+                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "SlowSellingProducts" ? "active" : "")">
+                    <i class="bi bi-graph-down"></i> Phân tích bán chậm
+                </a>
+            </li>
+            <li>
+                <a asp-controller="SpecGroup" asp-action="Index"
+                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "SpecGroup" ? "active" : "")">
+                    <i class="bi bi-gear-wide-connected"></i> @LocalizationHelper.T("Quản lý thông số")
+                </a>
+            </li>
+        </ul>
+    }
+
+    @if (User.IsInRole("Admin") || User.IsInRole(UserRoles.CustomerSupport))
+    {
+        <div class="sidebar-label">Hỗ trợ tư vấn</div>
+        <ul class="sidebar-nav">
+            <li>
+                <a asp-controller="Customer" asp-action="Index"
+                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Customer" ? "active" : "")">
+                    <i class="bi bi-people"></i> @LocalizationHelper.T("Customers")
+                </a>
+            </li>
+            @if (User.IsInRole("Admin") || User.IsInRole(UserRoles.CustomerSupport))
+            {
+                <li>
+                    <a asp-controller="Review" asp-action="Index"
+                       class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Review" ? "active" : "")">
+                        <i class="bi bi-star-half"></i> @LocalizationHelper.T("Đánh giá")
+                    </a>
+                </li>
+            }
+            <li>
+                <a asp-controller="Chat" asp-action="StaffDashboard"
+                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Chat" ? "active" : "")">
+                    <i class="bi bi-chat-dots"></i> @LocalizationHelper.T("Tư vấn khách hàng")
+                </a>
+            </li>
+        </ul>
+    }
+
+    @if (User.IsInRole("Admin") || User.IsInRole("EmployeeManager"))
+    {
+        <div class="sidebar-label">Quản lý nhân sự</div>
+        <ul class="sidebar-nav">
+            <li>
+                <a asp-controller="StaffManagement" asp-action="Index"
+                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "StaffManagement" ? "active" : "")">
+                    <i class="bi bi-person-badge"></i> Quản lý nhân viên
+                </a>
+            </li>
+        </ul>
+    }
+
+    @if (User.IsInRole("Admin") || User.IsInRole("Staff"))
+    {
+        <div class="sidebar-label">Quản lý đơn hàng</div>
+        <ul class="sidebar-nav">
+            <li>
+                <a asp-controller="Order" asp-action="AdminIndex"
+                   class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Order" ? "active" : "")">
+                    <i class="bi bi-cart-check"></i> @LocalizationHelper.T("Orders")
+                </a>
+            </li>
+        </ul>
+    }
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+        <a asp-controller="Home" asp-action="Index" target="_blank">
+            <i class="bi bi-globe2"></i> Xem trang web
+        </a>
+        <a asp-controller="Account" asp-action="Logout" class="btn-logout-side">
+            <i class="bi bi-box-arrow-right"></i> Đăng xuất
+        </a>
+    </div>
+</aside>
+
+<!-- ===== TOP BAR ===== -->
+<div class="admin-topbar">
+    <div class="d-flex align-items-center gap-3">
+        <button class="btn-sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+            <i class="bi bi-list"></i>
+        </button>
+        <span class="topbar-title">@ViewData["Title"]</span>
+    </div>
+    <div class="topbar-actions d-flex align-items-center gap-1">
+        <span class="text-muted small me-2" style="color:#8892a4!important">
+            <i class="bi bi-person-circle me-1"></i>@LocalizationHelper.T(User.Identity?.Name)
+        </span>
+    </div>
+</div>
+
+<!-- Overlay for mobile -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="admin-main">
+    <main role="main">
+        @RenderBody()
+    </main>
+</div>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+<script>
+    // Mobile sidebar toggle
+    const toggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('adminSidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    function openSidebar() {
+        sidebar.classList.add('open');
+        overlay.classList.add('open');
+    }
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('open');
+    }
+
+    toggle?.addEventListener('click', () => {
+        sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+    });
+    overlay?.addEventListener('click', closeSidebar);
+</script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

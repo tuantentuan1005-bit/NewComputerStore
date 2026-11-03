@@ -1,0 +1,257 @@
+@model List<NewComputerStore.Models.CartItem>
+
+@{
+    ViewData["Title"] = LocalizationHelper.T("Shopping Cart");
+}
+
+<style>
+    #cart-summary-card {
+        background: linear-gradient(135deg, #4a00e0 0%, #8e2de2 100%) !important;
+        border-radius: 2rem !important;
+        border: none !important;
+        box-shadow: 0 20px 50px rgba(74, 0, 224, 0.4) !important;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        color: #fff !important;
+    }
+    #cart-summary-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 28px 60px rgba(74, 0, 224, 0.5) !important;
+    }
+    #cart-summary-card .card-body {
+        color: #fff !important;
+        background: transparent !important;
+    }
+    #cart-summary-card h4,
+    #cart-summary-card span,
+    #cart-summary-card p {
+        color: #fff !important;
+    }
+    #cart-summary-card .summary-label {
+        color: rgba(255,255,255,0.82) !important;
+    }
+    #cart-summary-card .summary-value {
+        color: #fff !important;
+    }
+    #cart-summary-card hr {
+        border-color: rgba(255,255,255,0.25) !important;
+        opacity: 1 !important;
+    }
+    #cart-summary-card .glass-alert {
+        background: rgba(255,255,255,0.15) !important;
+        border: 1px solid rgba(255,255,255,0.25) !important;
+        backdrop-filter: blur(12px);
+        border-radius: 1.2rem !important;
+        color: #fff !important;
+    }
+    #cart-summary-card .btn-checkout {
+        background: #ffffff !important;
+        color: #4a00e0 !important;
+        border: none !important;
+        border-radius: 50px !important;
+        font-weight: 800 !important;
+        padding: 14px 24px !important;
+        font-size: 1.1rem !important;
+        transition: all 0.3s ease !important;
+        width: 100% !important;
+        display: block !important;
+        text-align: center;
+        text-decoration: none;
+    }
+    #cart-summary-card .btn-checkout:hover {
+        transform: scale(1.03);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2) !important;
+        background: #f0eeff !important;
+        color: #4a00e0 !important;
+    }
+    #cart-summary-card .btn-login-outline {
+        background: transparent !important;
+        border: 2px solid rgba(255,255,255,0.65) !important;
+        color: #fff !important;
+        border-radius: 50px !important;
+        font-weight: 700 !important;
+        transition: all 0.3s ease !important;
+        width: 100% !important;
+        display: block;
+        text-align: center;
+        text-decoration: none;
+        padding: 10px;
+    }
+    #cart-summary-card .btn-login-outline:hover {
+        background: #fff !important;
+        color: #4a00e0 !important;
+        border-color: #fff !important;
+    }
+</style>
+
+<div class="container py-5 animate-in">
+    <h1 class="fw-bold mb-5"><i class="bi bi-cart3"></i> @LocalizationHelper.T("Your Shopping Cart")</h1>
+
+    @if (Model == null || !Model.Any())
+    {
+        <div class="text-center py-5 bg-white rounded-4 shadow-sm border-0">
+            <i class="bi bi-cart-x text-muted" style="font-size: 5rem;"></i>
+            <h3 class="mt-4 text-muted fw-bold">@LocalizationHelper.T("Your cart is currently empty.")</h3>
+            <p class="text-muted mb-4 fs-5">@LocalizationHelper.T("Looks like you haven't added anything to your cart yet.")</p>
+            <a asp-controller="Product" asp-action="Index" class="btn btn-gradient btn-lg px-5 rounded-pill shadow">@LocalizationHelper.T("Start Shopping")</a>
+        </div>
+    }
+    else
+    {
+        @if (ViewBag.HasExpiredItems == true)
+        {
+            <div class="alert alert-danger alert-dismissible fade show rounded-4 border-0 shadow-sm p-4 mb-4" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle-fill fs-3 me-3 text-danger animate-bounce"></i>
+                    <div>
+                        <h5 class="alert-heading fw-bold mb-1">@LocalizationHelper.T("Giỏ hàng của bạn có lỗi")</h5>
+                        <p class="mb-0">@LocalizationHelper.T("Một số sản phẩm đã hết hàng, bị ẩn hoặc thay đổi trạng thái. Vui lòng xóa hoặc giảm số lượng để thanh toán.")</p>
+                    </div>
+                </div>
+            </div>
+        }
+        <div class="row">
+            <div class="col-lg-8 mb-4">
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-body p-4">
+                        <div class="table-responsive">
+                            <table class="table table-borderless table-hover cart-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>@LocalizationHelper.T("Product")</th>
+                                        <th class="text-center">@LocalizationHelper.T("Price")</th>
+                                        <th class="text-center" style="width: 150px;">@LocalizationHelper.T("Quantity")</th>
+                                        <th class="text-end">@LocalizationHelper.T("Total")</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model)
+                                    {
+                                        var key = $"{item.ProductId}_{item.ColorId}";
+                                        var validationError = ViewBag.ValidationResults != null && ViewBag.ValidationResults.ContainsKey(key) ? (string)ViewBag.ValidationResults[key] : null;
+
+                                        <tr class="table-row-middle border-bottom @(validationError != null ? "table-danger" : "")" style="@(validationError != null ? "border-left: 4px solid #dc3545;" : "")">
+                                            <td>
+                                                <div class="d-flex align-items-center py-2">
+                                                    <div class="bg-light rounded p-2 me-3 d-flex align-items-center justify-content-center overflow-hidden" style="width: 60px; height: 60px;">
+                                                        @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                                        {
+                                                            <img src="@Url.Content("~/images/" + item.ImageUrl)" alt="@item.ProductName" class="img-fluid" style="max-height: 100%; object-fit: contain;">
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="bi bi-box-seam fs-3 text-primary"></i>
+                                                        }
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="mb-0 fw-bold">@item.ProductName</h6>
+                                                        @if (item.ColorId.HasValue)
+                                                        {
+                                                            <div class="d-flex align-items-center mt-1">
+                                                                <span class="badge rounded-pill border text-dark bg-light d-flex align-items-center py-1 px-2">
+                                                                    <span style="display:inline-block; width:12px; height:12px; background-color:@item.ColorCode; border-radius:50%; margin-right:6px; border:1px solid #ddd;"></span>
+                                                                    <span style="font-size: 0.75rem;">@LocalizationHelper.T(item.ColorName)</span>
+                                                                </span>
+                                                            </div>
+                                                        }
+                                                        @if (validationError != null)
+                                                        {
+                                                            <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i> @validationError</div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center fw-semibold">
+                                                @if (item.DiscountPercent.HasValue && item.DiscountPercent > 0)
+                                                {
+                                                    <div><span class="text-decoration-line-through text-muted small">@LocalizationHelper.FormatCurrency(item.OriginalPrice)</span> <span class="badge bg-danger small">-@item.DiscountPercent.Value.ToString("0")%</span></div>
+                                                    <span class="text-danger fw-bold">@LocalizationHelper.FormatCurrency(item.Price)</span>
+                                                }
+                                                else
+                                                {
+                                                    @LocalizationHelper.FormatCurrency(item.Price)
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                <form asp-action="UpdateCart" method="post" class="d-flex align-items-center justify-content-center">
+                                                    <input type="hidden" name="productId" value="@item.ProductId" />
+                                                    <input type="hidden" name="colorId" value="@item.ColorId" />
+                                                    <input type="number" name="quantity" value="@item.Quantity" class="form-control form-control-sm text-center mx-2 shadow-sm" min="1" style="width: 70px; border-radius: 8px;" onchange="this.form.submit()" />
+                                                </form>
+                                            </td>
+                                            <td class="text-end fw-bold text-primary"> @LocalizationHelper.FormatCurrency(item.Total) </td>
+                                            <td class="text-end">
+                                                <form asp-action="RemoveFromCart" method="post">
+                                                    <input type="hidden" name="productId" value="@item.ProductId" />
+                                                    <input type="hidden" name="colorId" value="@item.ColorId" />
+                                                    <button type="submit" class="btn btn-link text-danger p-0 hover-rotate"><i class="bi bi-trash fs-5"></i></button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <a asp-controller="Product" asp-action="Index" class="btn btn-outline-secondary fw-bold rounded-pill px-4"><i class="bi bi-arrow-left me-2"></i>@LocalizationHelper.T("Continue Shopping")</a>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div id="cart-summary-card" class="card">
+                    <div class="card-body p-4">
+                        <h4 class="fw-bold border-bottom border-light border-opacity-25 pb-3 mb-4">@LocalizationHelper.T("Order Summary")</h4>
+                        
+                        <div class="d-flex justify-content-between mb-3 fs-5">
+                            <span class="summary-label">@LocalizationHelper.T("Subtotal")</span>
+                            <span class="summary-value fw-bold">@LocalizationHelper.FormatCurrency(Model.Sum(x => x.Total))</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3 fs-5">
+                            <span class="summary-label">@LocalizationHelper.T("Shipping")</span>
+                            <span class="summary-value fw-bold">@LocalizationHelper.T("Free")</span>
+                        </div>
+                        
+                        <hr class="border-light opacity-25 my-4" />
+                        
+                        <div class="d-flex justify-content-between mb-4 fs-4 fw-bold">
+                            <span class="summary-label">@LocalizationHelper.T("Total")</span>
+                            <span class="summary-value">@LocalizationHelper.FormatCurrency(Model.Sum(x => x.Total))</span>
+                        </div>
+                        
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            @if (ViewBag.HasExpiredItems == true)
+                            {
+                                <button class="btn btn-checkout btn-lg w-100 py-3 fs-5 mt-2 shadow-sm" disabled style="opacity: 0.65; cursor: not-allowed;" title="@LocalizationHelper.T("Giỏ hàng chứa sản phẩm không hợp lệ hoặc hết hàng")">
+                                    @LocalizationHelper.T("Proceed to Checkout") <i class="bi bi-arrow-right ms-2"></i>
+                                </button>
+                                <div class="text-center text-white text-opacity-75 small mt-2">
+                                    <i class="bi bi-exclamation-octagon me-1"></i> @LocalizationHelper.T("Vui lòng sửa các lỗi để thanh toán")
+                                </div>
+                            }
+                            else
+                            {
+                                <a asp-controller="Order" asp-action="Checkout" class="btn btn-checkout btn-lg w-100 py-3 fs-5 mt-2 shadow-sm">
+                                    @LocalizationHelper.T("Proceed to Checkout") <i class="bi bi-arrow-right ms-2"></i>
+                                </a>
+                            }
+                        }
+                        else
+                        {
+                            <div class="glass-alert text-center p-4 rounded-4 mt-3 mb-0">
+                                <p class="mb-3 fw-bold">@LocalizationHelper.T("Please login to checkout")</p>
+                                <a asp-controller="Account" asp-action="Login" class="btn btn-login-outline w-100 fw-bold">@LocalizationHelper.T("Login")</a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+
+
+

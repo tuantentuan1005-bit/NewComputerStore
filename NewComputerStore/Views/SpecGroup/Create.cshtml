@@ -1,0 +1,29 @@
+@model NewComputerStore.Models.SpecGroup
+@{
+    ViewData["Title"] = "Thêm Nhóm Thông Số";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<h2 class="mt-4 mb-4">Thêm Nhóm Thông Số</h2>
+
+<div class="card shadow-sm col-md-6 border-0 rounded-4">
+    <div class="card-body p-4">
+        <form asp-action="Create">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+            <div class="mb-3">
+                <label asp-for="CategoryId" class="form-label fw-bold"></label>
+                <select asp-for="CategoryId" class="form-select" asp-items="@(new SelectList(ViewBag.Categories, "CategoryId", "CategoryName"))"></select>
+                <span asp-validation-for="CategoryId" class="text-danger"></span>
+            </div>
+            <div class="mb-4">
+                <label asp-for="Name" class="form-label fw-bold"></label>
+                <input asp-for="Name" class="form-control" placeholder="VD: Hiệu năng, Màn hình, Kết nối..." />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="d-flex justify-content-between pt-3 border-top">
+                <a asp-action="Index" class="btn btn-light"><i class="bi bi-arrow-left"></i> Quay lại</a>
+                <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save"></i> Lưu nhóm</button>
+            </div>
+        </form>
+    </div>
+</div>

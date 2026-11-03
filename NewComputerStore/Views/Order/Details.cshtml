@@ -1,0 +1,152 @@
+@model NewComputerStore.Models.Order
+
+@using NewComputerStore.Helpers
+@{
+    ViewData["Title"] = LocalizationHelper.T("Order Details");
+}
+
+<div class="container py-5 animate-in">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="fw-bold m-0"><i class="bi bi-receipt text-primary"></i> @LocalizationHelper.T("Order") #@Model.OrderId</h1>
+        <div class="d-flex gap-2">
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-action="AdminIndex" class="btn btn-outline-primary rounded-pill px-4"><i class="bi bi-shield-lock"></i> @LocalizationHelper.T("Admin Orders")</a>
+            }
+            else if (User.IsInRole("Staff"))
+            {
+                <a asp-action="AdminIndex" class="btn btn-outline-info rounded-pill px-4"><i class="bi bi-list-ul"></i> @LocalizationHelper.T("All Orders")</a>
+            }
+            else
+            {
+                <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4"><i class="bi bi-arrow-left"></i> @LocalizationHelper.T("Back to My Orders")</a>
+            }
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold">@LocalizationHelper.T("Order Items")</h5>
+                    <span class="badge bg-primary rounded-pill px-3 py-2 fs-6">@LocalizationHelper.T(Model.Status)</span>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush rounded-bottom-4">
+                        @foreach (var detail in Model.OrderDetails)
+                        {
+                            <li class="list-group-item p-4 d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded p-2 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                        @if(detail.Product != null && !string.IsNullOrEmpty(detail.Product.ImageUrl))
+                                        {
+                                            <img src="~/images/@detail.Product.ImageUrl" alt="@detail.Product.ProductName" class="img-fluid" />
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-box-seam fs-3 text-primary"></i>
+                                        }
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-1 fw-bold">
+                                            @if(detail.Product != null) {
+                                                <a asp-controller="Product" asp-action="Details" asp-route-id="@detail.Product.ProductId" class="text-decoration-none text-dark hover-blue">@detail.Product.ProductName</a>
+                                            } else {
+                                                <span>@LocalizationHelper.T("Product Unavailable")</span>
+                                            }
+                                        </h6>
+                                        <div class="d-flex align-items-center gap-3">
+                                            @if (!string.IsNullOrEmpty(detail.ColorName))
+                                            {
+                                                <span class="badge rounded-pill border text-dark bg-light d-flex align-items-center py-1 px-2 mb-1">
+                                                    <span style="display:inline-block; width:12px; height:12px; background-color:@detail.ColorCode; border-radius:50%; margin-right:6px; border:1px solid #ddd;"></span>
+                                                    <span style="font-size: 0.75rem;">@detail.ColorName</span>
+                                                </span>
+                                            }
+                                            @if (detail.DiscountPercent > 0)
+                                            {
+                                                <small class="text-muted">
+                                                    @LocalizationHelper.T("Quantity"): <span class="fw-bold">@detail.Quantity</span> x
+                                                    <span class="text-decoration-line-through">@LocalizationHelper.FormatCurrency(detail.OriginalPrice)</span>
+                                                    <span class="text-danger fw-bold">@LocalizationHelper.FormatCurrency(detail.FinalPrice)</span>
+                                                    <span class="badge bg-danger ms-1">-@detail.DiscountPercent.ToString("0")%</span>
+                                                </small>
+                                            }
+                                            else
+                                            {
+                                                <small class="text-muted">@LocalizationHelper.T("Quantity"): <span class="fw-bold">@detail.Quantity</span> x @LocalizationHelper.FormatCurrency(detail.FinalPrice)</small>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="fw-bold fs-5 text-dark text-nowrap">
+                                    @LocalizationHelper.FormatCurrency(detail.Quantity * detail.FinalPrice)
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 rounded-4 mt-4">
+                <div class="card-header bg-white border-bottom py-3 px-4">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-truck me-2 text-primary"></i>@LocalizationHelper.T("Shipping Information")</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <p class="text-muted mb-1 small text-uppercase fw-bold">@LocalizationHelper.T("Receiver")</p>
+                            <p class="mb-0 fw-bold fs-5">@Model.FullName</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="text-muted mb-1 small text-uppercase fw-bold">@LocalizationHelper.T("Phone Number")</p>
+                            <p class="mb-0 fw-bold fs-5">@Model.Phone</p>
+                        </div>
+                    </div>
+                    <hr class="my-3 opacity-25">
+                    <div>
+                        <p class="text-muted mb-1 small text-uppercase fw-bold">@LocalizationHelper.T("Delivery Address")</p>
+                        <p class="mb-0 fs-5">@Model.Address</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-white border-bottom py-3 px-4">
+                    <h5 class="mb-0 fw-bold">@LocalizationHelper.T("Order Summary")</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between mb-3 text-muted">
+                        <span>@LocalizationHelper.T("Order Date")</span>
+                        <span>@LocalizationHelper.FormatDate(Model.OrderDate)</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3 text-muted">
+                        <span>@LocalizationHelper.T("Subtotal")</span>
+                        <span>@LocalizationHelper.FormatCurrency(Model.TotalPrice)</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3 text-muted">
+                        <span>@LocalizationHelper.T("Shipping")</span>
+                        <span class="text-success fw-bold">@LocalizationHelper.T("FREE")</span>
+                    </div>
+                    <hr class="opacity-25" />
+                    <div class="d-flex justify-content-between fs-4 fw-bold mt-3">
+                        <span>@LocalizationHelper.T("Total Paid")</span>
+                        <span class="text-primary">@LocalizationHelper.FormatCurrency(Model.TotalPrice)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-info border-0 rounded-4 mt-4 shadow-sm">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-info-circle-fill fs-3 me-3"></i>
+                    <div>
+                        <h6 class="fw-bold mb-1">@LocalizationHelper.T("Need help with your order?")</h6>
+                        <p class="mb-0 small">@LocalizationHelper.T("Contact our support at") <a href="mailto:support@newcomputer.com" class="text-decoration-none">support@newcomputer.com</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,189 @@
+@model NewComputerStore.Models.User
+@{
+    ViewData["Title"] = "Chi tiết khách hàng";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<style>
+    .detail-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 2px 16px rgba(0,0,0,.07);
+        overflow: hidden;
+        margin-bottom: 22px;
+    }
+    .detail-card-header {
+        background: linear-gradient(135deg, #1a1a2e, #16213e);
+        padding: 22px 28px;
+        color: #fff;
+    }
+    .detail-card-header h5 { margin: 0; font-weight: 700; font-size: 1rem; }
+    .detail-card-body { padding: 24px 28px; }
+
+    .profile-avatar-lg {
+        width: 72px; height: 72px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: #fff;
+        font-weight: 800;
+        font-size: 1.8rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .info-row { display: flex; flex-direction: column; gap: 14px; }
+    .info-item label {
+        font-size: .72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .8px;
+        color: #8892a4;
+        margin-bottom: 3px;
+    }
+    .info-item .value {
+        font-size: .95rem;
+        font-weight: 600;
+        color: #1a1a2e;
+    }
+
+    .badge-active  { background: #d1fae5; color: #065f46; font-size:.78rem; font-weight:700; padding:5px 12px; border-radius:20px; }
+    .badge-locked  { background: #fee2e2; color: #991b1b; font-size:.78rem; font-weight:700; padding:5px 12px; border-radius:20px; }
+    .badge-customer { background: #e9ecef; color: #6c757d; font-size:.78rem; font-weight:700; padding:5px 12px; border-radius:20px; }
+
+    .order-mini-table thead th {
+        background: #f8f9fc;
+        font-size: .7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .8px;
+        color: #8892a4;
+        padding: 10px 14px;
+    }
+    .order-mini-table tbody td {
+        padding: 10px 14px;
+        font-size: .875rem;
+        border-bottom: 1px solid #f0f2f5;
+    }
+</style>
+
+<!-- Back button -->
+<div class="mb-3">
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-3">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- Profile Card -->
+    <div class="col-md-4">
+        <div class="detail-card">
+            <div class="detail-card-header text-center">
+                <div class="d-flex justify-content-center mb-3">
+                    <div class="profile-avatar-lg">@Model.FullName.Substring(0, 1).ToUpper()</div>
+                </div>
+                <h5>@Model.FullName</h5>
+                <div style="color:#8892a4; font-size:.85rem">@Model.Email</div>
+                <div class="mt-3">
+                    @if (Model.IsActive)
+                    {
+                        <span class="badge-active"><i class="bi bi-circle-fill me-1" style="font-size:.45rem"></i>Hoạt động</span>
+                    }
+                    else
+                    {
+                        <span class="badge-locked"><i class="bi bi-lock-fill me-1" style="font-size:.55rem"></i>Đã khóa</span>
+                    }
+                </div>
+            </div>
+            <div class="detail-card-body">
+                <div class="info-row">
+                    <div class="info-item">
+                        <label>Mã khách hàng</label>
+                        <div class="value">#@Model.UserId</div>
+                    </div>
+                    <div class="info-item">
+                        <label>Vai trò</label>
+                        <div><span class="badge-customer">Khách hàng</span></div>
+                    </div>
+                    <div class="info-item">
+                        <label>Tổng đơn hàng</label>
+                        <div class="value">@(Model.Orders?.Count ?? 0) đơn hàng</div>
+                    </div>
+                </div>
+
+                @if (Model.Email != "admin@store.com")
+                {
+                    <div class="mt-4">
+                        <form asp-action="ToggleActive" asp-route-id="@Model.UserId" method="post">
+                            @Html.AntiForgeryToken()
+                            @if (Model.IsActive)
+                            {
+                                <button type="submit" class="btn btn-danger w-100 btn-sm rounded-3"
+                                        onclick="return confirm('Khóa tài khoản này?')">
+                                    <i class="bi bi-lock me-2"></i>Khóa tài khoản
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="submit" class="btn btn-success w-100 btn-sm rounded-3">
+                                    <i class="bi bi-unlock me-2"></i>Mở khóa tài khoản
+                                </button>
+                            }
+                        </form>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders History -->
+    <div class="col-md-8">
+        <div class="detail-card">
+            <div class="detail-card-header">
+                <h5><i class="bi bi-cart3 me-2"></i>Lịch sử mua hàng</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0 order-mini-table">
+                    <thead>
+                        <tr>
+                            <th>Mã đơn</th>
+                            <th>Ngày đặt</th>
+                            <th>Tổng tiền</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Orders == null || !Model.Orders.Any())
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    <i class="bi bi-inbox" style="font-size:1.5rem; opacity:.4; display:block; margin-bottom:8px"></i>
+                                    Chưa có đơn hàng nào
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var order in Model.Orders?.OrderByDescending(o => o.OrderDate) ?? Enumerable.Empty<NewComputerStore.Models.Order>())
+                        {
+                            <tr>
+                                <td class="fw-semibold">#@order.OrderId</td>
+                                <td class="text-muted">@order.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="fw-bold">@order.TotalPrice.ToString("N0") VNĐ</td>
+                                <td>
+                                    @{
+                                        var statusClass = order.Status switch
+                                        {
+                                            "Completed" => "badge-active",
+                                            "Cancelled" => "badge-locked",
+                                            _ => "badge-customer"
+                                        };
+                                    }
+                                    <span class="@statusClass">@order.Status</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

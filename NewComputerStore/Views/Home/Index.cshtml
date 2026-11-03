@@ -1,0 +1,67 @@
+@model IEnumerable<NewComputerStore.Models.Product>
+
+@{
+    ViewData["Title"] = LocalizationHelper.T("Home");
+}
+
+<!-- Hero Section -->
+<div class="hero-section text-center animate-in">
+    <div class="container py-5">
+        <h1 class="hero-title display-4">@LocalizationHelper.T("Power Up Your Performance")</h1>
+        <p class="lead mb-4 fs-4">@LocalizationHelper.T("Explore the absolute best in computer hardware, laptops, and accessories.")</p>
+        <a asp-controller="Product" asp-action="Index" class="btn btn-light btn-lg rounded-pill px-5 py-3 fw-bold text-primary shadow-sm">@LocalizationHelper.T("Shop Now")</a>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 mt-5">
+        <h3 class="fw-bold m-0"><i class="bi bi-star-fill text-warning me-2"></i> @LocalizationHelper.T("Featured Products")</h3>
+        <a asp-controller="Product" asp-action="Index" class="text-decoration-none text-muted">@LocalizationHelper.T("View all") <i class="bi bi-arrow-right"></i></a>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 animate-in">
+        @foreach (var item in Model)
+        {
+            <div class="col">
+                <div class="card product-card h-100 position-relative">
+                    @if(item.Category != null)
+                    {
+                        <span class="position-absolute top-0 start-0 m-3 badge badge-category z-1">
+                            @item.Category.CategoryName
+                        </span>
+                    }
+                    <a asp-controller="Product" asp-action="Details" asp-route-id="@item.ProductId" class="product-img-wrapper">
+                        @if (!string.IsNullOrEmpty(item.ImageUrl))
+                        {
+                            <img src="@Url.Content("~/images/" + item.ImageUrl)" asp-append-version="true" alt="@item.ProductName" />
+                        }
+                        else
+                        {
+                            <img src="https://via.placeholder.com/300x250?text=No+Image" alt="No image available" />
+                        }
+                    </a>
+                    <div class="card-body d-flex flex-column p-4">
+                        <a asp-controller="Product" asp-action="Details" asp-route-id="@item.ProductId" class="product-title mb-2 flex-grow-1 text-truncate" title="@item.ProductName">
+                            @item.ProductName
+                        </a>
+                        <div class="mt-3 text-center">
+                            @if (item.DiscountPercent > 0)
+                            {
+                                <div>
+                                    <span class="text-decoration-line-through text-muted small">@LocalizationHelper.FormatCurrency(item.Price)</span>
+                                    <span class="badge bg-danger ms-1 small">-@item.DiscountPercent.ToString("0")%</span>
+                                </div>
+                                <span class="product-price fs-5 text-danger fw-bold">@LocalizationHelper.FormatCurrency(item.FinalPrice)</span>
+                            }
+                            else
+                            {
+                                <span class="product-price fs-5">@LocalizationHelper.FormatCurrency(item.FinalPrice)</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

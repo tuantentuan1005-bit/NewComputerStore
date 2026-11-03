@@ -1,0 +1,112 @@
+@model NewComputerStore.ViewModels.LoginViewModel
+
+@{
+    ViewData["Title"] = LocalizationHelper.T("Log in");
+}
+
+<div class="container py-5 animate-in">
+    <div class="row justify-content-center">
+        <div class="col-md-5 col-lg-4">
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+                <div class="bg-primary p-4 text-center text-white">
+                    <i class="bi bi-person-circle fs-1"></i>
+                    <h2 class="fw-bold mt-2 mb-0">@LocalizationHelper.T("Welcome Back")</h2>
+                    <p class="opacity-75 mb-0">@LocalizationHelper.T("Login to your account")</p>
+                </div>
+                <div class="card-body p-4 p-md-5">
+                    @if (TempData["SuccessMessage"] != null)
+                    {
+                        <div class="alert alert-success border-0 shadow-sm rounded-3 p-3 mb-4 animate-in">
+                            <i class="bi bi-check-circle-fill me-2 text-success"></i> @TempData["SuccessMessage"]
+                        </div>
+                    }
+
+                    @if (ViewData["UnverifiedEmail"] != null)
+                    {
+                        bool smtpOk = ViewData["SmtpConfigured"] is bool b && b;
+                        <div class="alert alert-warning border-0 shadow-sm rounded-3 p-3 mb-4 animate-in">
+                            <div class="d-flex">
+                                <div class="me-3 fs-3 text-warning">
+                                    <i class="bi bi-exclamation-triangle-fill"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="fw-bold mb-1">Email chưa được xác thực!</h6>
+                                    @if (smtpOk)
+                                    {
+                                        <p class="small text-muted mb-2">Vui lòng kiểm tra hộp thư Gmail của bạn và nhấp vào link xác thực đã được gửi lúc đăng ký.</p>
+                                    }
+                                    else
+                                    {
+                                        <p class="small mb-2 text-danger fw-semibold">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            Hệ thống email chưa được cấu hình (SMTP). Vui lòng liên hệ quản trị viên để kích hoạt tài khoản thủ công.
+                                        </p>
+                                    }
+                                    @if (smtpOk)
+                                    {
+                                        <form asp-action="ResendConfirmation" method="post">
+                                            <input type="hidden" name="email" value="@ViewData["UnverifiedEmail"]" />
+                                            <button type="submit" class="btn btn-warning btn-sm fw-semibold rounded-pill px-3 shadow-sm">Gửi lại link xác thực</button>
+                                        </form>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <form asp-action="Login" method="post" asp-route-returnurl="@ViewData["ReturnUrl"]">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
+                        
+                        <div class="form-floating mb-3">
+                            <input asp-for="Email" class="form-control rounded-3" placeholder="name@example.com" />
+                            <label asp-for="Email">@LocalizationHelper.T("Email address")</label>
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+                        
+                        <div class="form-floating mb-3">
+                            <input asp-for="Password" class="form-control rounded-3" placeholder="@LocalizationHelper.T("Password")" />
+                            <label asp-for="Password">@LocalizationHelper.T("Password")</label>
+                            <span asp-validation-for="Password" class="text-danger small"></span>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" asp-for="RememberMe" />
+                                <label class="form-check-label text-muted small" asp-for="RememberMe">
+                                    @LocalizationHelper.T("Remember me")
+                                </label>
+                            </div>
+                            <a asp-action="ForgotPassword" class="text-primary small text-decoration-none">@LocalizationHelper.T("Forgot password?")</a>
+                        </div>
+                        
+                        <button id="login-submit" type="submit" class="w-100 btn btn-primary btn-lg rounded-pill fw-bold shadow-sm py-3 mb-4">
+                            @LocalizationHelper.T("Log in") <i class="bi bi-box-arrow-in-right ms-2"></i>
+                        </button>
+                        
+                        <div class="position-relative mb-4">
+                            <hr class="text-muted opacity-25">
+                            <span class="position-absolute top-50 start-50 translate-middle bg-white px-3 text-muted small">@LocalizationHelper.T("Or continue with")</span>
+                        </div>
+                        
+                        <a asp-action="ExternalLogin" asp-route-provider="Google" asp-route-returnUrl="@ViewData["ReturnUrl"]" 
+                           class="btn btn-outline-secondary btn-lg w-100 rounded-pill d-flex align-items-center justify-content-center py-2 mb-4 hover-lift">
+                            <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" width="20" class="me-3" alt="Google">
+                            <span class="fw-semibold">Google</span>
+                        </a>
+                        
+                        <div class="text-center">
+                            <p class="text-muted small mb-0">
+                                @LocalizationHelper.T("Don't have an account?") 
+                                <a asp-action="Register" asp-route-returnurl="@ViewData["ReturnUrl"]" class="text-primary fw-bold text-decoration-none">@LocalizationHelper.T("Register now")</a>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

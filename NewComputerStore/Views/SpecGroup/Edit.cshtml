@@ -1,0 +1,194 @@
+@model NewComputerStore.Models.SpecGroup
+@{
+    ViewData["Title"] = "Cấu hình Nhóm Thông Số";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<h2 class="mt-4 mb-4">Cấu hình: <span class="text-primary">@Model.Name</span> (@Model.Category?.CategoryName)</h2>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show rounded-4" role="alert">
+        <i class="bi bi-check-circle me-1"></i> @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row">
+    <!-- Edit Group Info -->
+    <div class="col-md-5 mb-4">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white pt-3 pb-2 border-0">
+                <h5 class="fw-bold mb-0"><i class="bi bi-pencil-square text-primary me-2"></i>Sửa thông tin nhóm</h5>
+            </div>
+            <div class="card-body p-4">
+                <form asp-action="Edit">
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="CategoryId" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <div class="mb-3">
+                        <label asp-for="Name" class="form-label fw-bold"></label>
+                        <input asp-for="Name" class="form-control" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+                    <div class="mb-4">
+                        <label asp-for="DisplayOrder" class="form-label fw-bold"></label>
+                        <input asp-for="DisplayOrder" class="form-control" type="number" />
+                        <span asp-validation-for="DisplayOrder" class="text-danger"></span>
+                    </div>
+                    <div class="d-flex justify-content-between pt-3 border-top">
+                        <a asp-action="Index" class="btn btn-light"><i class="bi bi-arrow-left"></i> Quay lại</a>
+                        <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save"></i> Lưu thay đổi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Spec Keys -->
+    <div class="col-md-7 mb-4">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white pt-3 pb-2 border-0 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0"><i class="bi bi-list-check text-success me-2"></i>Các Thuộc Tính (Keys)</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="input-group mb-4">
+                    <input type="text" id="newKeyName" class="form-control border-end-0" placeholder="Thêm thuộc tính mới (VD: CPU, Độ phân giải...)">
+                    <button class="btn btn-success" type="button" id="btnAddKey"><i class="bi bi-plus-lg me-1"></i>Thêm</button>
+                </div>
+
+                <div class="list-group list-group-flush" id="specKeyList">
+                    @if (Model.SpecKeys != null && Model.SpecKeys.Any())
+                    {
+                        foreach (var key in Model.SpecKeys)
+                        {
+                            <div class="list-group-item d-flex justify-content-between align-items-center border px-3 py-2 mb-2 rounded bg-light" data-id="@key.Id">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-grip-vertical text-muted me-2 drag-handle" style="cursor: grab;"></i>
+                                    <span class="fw-bold text-dark">@key.Name</span>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger border-0 btn-delete-key" data-id="@key.Id"><i class="bi bi-trash"></i></button>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted fst-italic py-4" id="emptyKeysMsg">Nhóm này chưa có thuộc tính nào.</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const specKeyList = document.getElementById('specKeyList');
+            const btnAddKey = document.getElementById('btnAddKey');
+            const newKeyName = document.getElementById('newKeyName');
+            const emptyKeysMsg = document.getElementById('emptyKeysMsg');
+
+            // Initialize Sortable
+            new Sortable(specKeyList, {
+                handle: '.drag-handle',
+                animation: 150,
+                onEnd: function () {
+                    // Gather new order
+                    let orderedIds = [];
+                    specKeyList.querySelectorAll('.list-group-item').forEach(item => {
+                        orderedIds.push(item.dataset.id);
+                    });
+
+                    // Send AJAX to reorder
+                    fetch('/SpecGroup/ReorderKeys', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: JSON.stringify(orderedIds)
+                    });
+                }
+            });
+
+            // Add Key
+            btnAddKey.addEventListener('click', function () {
+                const name = newKeyName.value.trim();
+                if (!name) return;
+
+                const formData = new FormData();
+                formData.append('groupId', '@Model.Id');
+                formData.append('name', name);
+
+                fetch('/SpecGroup/AddKey', {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    newKeyName.value = '';
+                    if (emptyKeysMsg) emptyKeysMsg.remove();
+
+                    const html = `
+                        <div class="list-group-item d-flex justify-content-between align-items-center border px-3 py-2 mb-2 rounded bg-light" data-id="${data.id}">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-grip-vertical text-muted me-2 drag-handle" style="cursor: grab;"></i>
+                                <span class="fw-bold text-dark">${data.name}</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger border-0 btn-delete-key" data-id="${data.id}"><i class="bi bi-trash"></i></button>
+                        </div>
+                    `;
+                    specKeyList.insertAdjacentHTML('beforeend', html);
+                    bindDeleteEvents();
+                });
+            });
+
+            // Handle Enter key
+            newKeyName.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    btnAddKey.click();
+                }
+            });
+
+            // Delete Key
+            function bindDeleteEvents() {
+                document.querySelectorAll('.btn-delete-key').forEach(btn => {
+                    // Prevent multiple bindings
+                    btn.removeEventListener('click', deleteHandler);
+                    btn.addEventListener('click', deleteHandler);
+                });
+            }
+
+            function deleteHandler(e) {
+                const btn = e.currentTarget;
+                if (!confirm('Bạn có chắc chắn muốn xóa thuộc tính này? (Sẽ xóa các giá trị đã lưu của SP)')) return;
+
+                const id = btn.dataset.id;
+                const formData = new FormData();
+                formData.append('keyId', id);
+
+                fetch('/SpecGroup/DeleteKey', {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: formData
+                })
+                .then(() => {
+                    btn.closest('.list-group-item').remove();
+                    if (specKeyList.children.length === 0) {
+                        specKeyList.innerHTML = '<div class="text-center text-muted fst-italic py-4" id="emptyKeysMsg">Nhóm này chưa có thuộc tính nào.</div>';
+                    }
+                });
+            }
+
+            bindDeleteEvents();
+        });
+    </script>
+}

@@ -1,0 +1,126 @@
+@model NewComputerStore.Models.Order
+
+@{
+    ViewData["Title"] = "Thanh Toán QR";
+    var transferContent = $"Thanh toan don hang #{Model.OrderId}";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8">
+
+            @if (TempData["PaymentNotice"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show rounded-3 mb-4" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i> @TempData["PaymentNotice"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            <div class="card shadow border-0 rounded-4 overflow-hidden">
+                <!-- Header -->
+                <div class="card-header text-white text-center py-4" style="background: linear-gradient(135deg, #1a73e8, #0d47a1);">
+                    <i class="bi bi-qr-code display-4"></i>
+                    <h4 class="mt-2 mb-0 fw-bold">@LocalizationHelper.T("QR Payment")</h4>
+                    <p class="mb-0 opacity-75 mt-1">@LocalizationHelper.T("Scan QR code to pay for your order")</p>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+
+                    <!-- Order Info -->
+                    <div class="alert alert-light border rounded-3 mb-4">
+                        <div class="row text-center">
+                            <div class="col-6 border-end">
+                                <small class="text-muted d-block">@LocalizationHelper.T("Order ID")</small>
+                                <span class="fw-bold text-primary fs-5">#@Model.OrderId</span>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted d-block">@LocalizationHelper.T("Amount to transfer")</small>
+                                <span class="fw-bold text-success fs-5">@LocalizationHelper.FormatCurrency(Model.TotalPrice)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- QR Code Image -->
+                    <div class="text-center mb-4">
+                        <div class="d-inline-block p-3 border border-2 rounded-3 bg-white shadow-sm">
+                            <img src="/images/qr.png" alt="QR Code Thanh Toán" width="220" height="220"
+                                 onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=@Uri.EscapeDataString(transferContent)'"
+                                 class="img-fluid" />
+                        </div>
+                        <p class="text-muted small mt-2"><i class="bi bi-camera"></i> Mở ứng dụng Ngân hàng → Quét mã QR</p>
+                    </div>
+
+                    <!-- Transfer Info -->
+                    <div class="bg-light p-4 rounded-3 mb-4">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary me-2"></i>@LocalizationHelper.T("Transfer Information")</h6>
+                        <div class="row g-2">
+                            <div class="col-5 text-muted small">@LocalizationHelper.T("Transfer Content:")</div>
+                            <div class="col-7">
+                                <span class="fw-bold text-dark" id="transfer-content">@transferContent</span>
+                                <button class="btn btn-sm btn-link p-0 ms-2" onclick="copyText('@transferContent')" title="Copy">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                            <div class="col-5 text-muted small">@LocalizationHelper.T("Amount:")</div>
+                            <div class="col-7 fw-bold text-success">@LocalizationHelper.FormatCurrency(Model.TotalPrice)</div>
+                            <div class="col-5 text-muted small">@LocalizationHelper.T("Status"):</div>
+                            <div class="col-7">
+                                @if (Model.PaymentStatus == "Paid")
+                                {
+                                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> Đã thanh toán</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Chờ xác nhận</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    @if (Model.PaymentStatus != "Paid")
+                    {
+                        <form asp-action="MarkAsPaid" asp-route-id="@Model.OrderId" method="post" class="mb-3">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-success btn-lg w-100 rounded-pill fw-bold py-3">
+                                <i class="bi bi-check2-circle me-2"></i>@LocalizationHelper.T("I have paid")
+                            </button>
+                        </form>
+                        <p class="text-muted text-center small">
+                            <i class="bi bi-shield-check me-1"></i>
+                            Admin sẽ xác nhận và xử lý đơn hàng trong vòng 15–30 phút
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="alert alert-success text-center rounded-3">
+                            <i class="bi bi-patch-check-fill fs-3 d-block mb-2"></i>
+                            <strong>Thanh toán đã được xác nhận!</strong><br>
+                            <small>Đơn hàng của bạn đang được xử lý.</small>
+                        </div>
+                    }
+
+                    <div class="text-center mt-3">
+                        <a asp-action="Details" asp-route-id="@Model.OrderId" class="btn btn-outline-secondary rounded-pill px-4">
+                            <i class="bi bi-receipt me-2"></i>@LocalizationHelper.T("View Order Details")
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target.closest('button');
+                btn.innerHTML = '<i class="bi bi-clipboard-check text-success"></i>';
+                setTimeout(() => btn.innerHTML = '<i class="bi bi-clipboard"></i>', 2000);
+            });
+        }
+    </script>
+}

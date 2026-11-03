@@ -1,0 +1,257 @@
+@model NewComputerStore.Models.User
+@using NewComputerStore.Models
+@{
+    ViewData["Title"] = "Chỉnh sửa nhân viên";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    bool isPrimary = Model.Email == "admin@store.com";
+}
+
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 4px 24px rgba(0,0,0,.08);
+        overflow: hidden;
+        max-width: 580px;
+    }
+    .form-card-header {
+        background: linear-gradient(135deg, #0f3460, #1a1a2e);
+        padding: 24px 32px;
+        color: #fff;
+    }
+    .form-card-header h4 { margin: 0; font-weight: 700; font-size: 1.1rem; }
+    .form-card-header p  { margin: 4px 0 0; color: #8892a4; font-size: .85rem; }
+    .form-card-body { padding: 32px; }
+
+    .user-profile-strip {
+        background: #f8faff;
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 24px;
+        border: 1px solid #e0e6ef;
+    }
+    .strip-avatar {
+        width: 44px; height: 44px; border-radius: 50%;
+        background: linear-gradient(135deg,#3b82f6,#1d4ed8);
+        color:#fff; font-weight:700; font-size:1.1rem;
+        display:flex; align-items:center; justify-content:center;
+        flex-shrink:0;
+    }
+    .strip-name { font-weight: 700; font-size: .95rem; color: #1a1a2e; }
+    .strip-email { font-size: .8rem; color: #8892a4; }
+
+    .form-label-styled {
+        font-size: .78rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .7px;
+        color: #6c757d; margin-bottom: 6px;
+    }
+    .form-control-styled, .form-select-styled {
+        border-radius: 10px; border: 1.5px solid #e0e6ef;
+        padding: 10px 14px; font-size: .9rem;
+        transition: border-color .2s, box-shadow .2s;
+        width: 100%;
+    }
+    .form-control-styled:focus, .form-select-styled:focus {
+        border-color: #0f3460;
+        box-shadow: 0 0 0 3px rgba(15,52,96,.12);
+        outline: none;
+    }
+    .form-control-styled:disabled, .form-select-styled:disabled {
+        background: #f1f5f9; color: #94a3b8;
+    }
+
+    /* Role Cards */
+    .role-option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .role-option {
+        border: 2px solid #e0e6ef; border-radius: 12px; padding: 14px;
+        cursor: pointer; transition: all .2s; position: relative;
+    }
+    .role-option:hover { border-color: #0f3460; background: #f8faff; }
+    .role-option input[type=radio] { position: absolute; opacity: 0; }
+    .role-option.selected { border-color: #0f3460; background: #eff6ff; }
+    .role-option.disabled-opt { opacity: .5; pointer-events: none; }
+    .role-option .role-icon {
+        width: 34px; height: 34px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1rem; margin-bottom: 8px; color: #fff;
+    }
+    .role-option .role-name { font-size: .85rem; font-weight: 700; color: #1a1a2e; }
+    .role-option .role-desc { font-size: .72rem; color: #8892a4; margin-top: 2px; }
+
+    .icon-staff  { background: linear-gradient(135deg,#3b82f6,#1d4ed8); }
+    .icon-wm     { background: linear-gradient(135deg,#8b5cf6,#6d28d9); }
+    .icon-em     { background: linear-gradient(135deg,#f59e0b,#d97706); }
+    .icon-admin  { background: linear-gradient(135deg,#ef4444,#b91c1c); }
+
+    .status-toggle {
+        display: flex; gap: 10px;
+    }
+    .status-btn {
+        flex: 1; padding: 10px; border-radius: 10px;
+        border: 2px solid #e0e6ef; cursor: pointer;
+        text-align: center; font-size: .85rem; font-weight: 600;
+        transition: all .2s; position: relative;
+    }
+    .status-btn input { position: absolute; opacity: 0; }
+    .status-btn.active-sel {
+        border-color: #16a34a; background: #f0fdf4; color: #15803d;
+    }
+    .status-btn.locked-sel {
+        border-color: #dc2626; background: #fff1f2; color: #b91c1c;
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, #0f3460, #1a1a2e);
+        color: #fff; border: none; border-radius: 10px;
+        padding: 12px 32px; font-size: .9rem; font-weight: 700;
+        cursor: pointer; transition: opacity .2s, transform .15s;
+    }
+    .btn-submit:hover { opacity: .9; transform: translateY(-1px); }
+
+    .primary-shield {
+        background: #fef3c7; border: 1px solid #fcd34d;
+        border-radius: 10px; padding: 12px 16px;
+        font-size: .82rem; color: #92400e;
+        display: flex; align-items: center; gap: 8px;
+        margin-bottom: 20px;
+    }
+</style>
+
+<div class="mb-3">
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-3">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách
+    </a>
+</div>
+
+<div class="form-card">
+    <div class="form-card-header">
+        <h4><i class="bi bi-pencil-square me-2"></i>Chỉnh sửa tài khoản nhân viên</h4>
+        <p>Cập nhật vai trò và thiết lập quyền truy cập cho thành viên này</p>
+    </div>
+    <div class="form-card-body">
+
+        @if (isPrimary)
+        {
+            <div class="primary-shield">
+                <i class="bi bi-shield-lock-fill" style="font-size:1.1rem"></i>
+                <span>Đây là tài khoản <strong>Quản trị viên chính</strong>. Vai trò và trạng thái không thể thay đổi.</span>
+            </div>
+        }
+
+        <!-- User strip -->
+        <div class="user-profile-strip">
+            <div class="strip-avatar">@Model.FullName.Substring(0,1).ToUpper()</div>
+            <div>
+                <div class="strip-name">@Model.FullName</div>
+                <div class="strip-email">@Model.Email</div>
+            </div>
+        </div>
+
+        <form method="post" asp-action="Edit" asp-route-id="@Model.UserId">
+            @Html.AntiForgeryToken()
+
+            <div class="mb-4">
+                <label class="form-label-styled">Họ và tên</label>
+                <input type="text" name="fullName" value="@Model.FullName"
+                       class="form-control-styled" required
+                       @(isPrimary ? "disabled" : "") />
+                @if (isPrimary) {
+                    <input type="hidden" name="fullName" value="@Model.FullName" />
+                }
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label-styled">Vai trò</label>
+                @if (isPrimary)
+                {
+                    <input type="hidden" name="role" value="@Model.Role" />
+                    <div class="form-control-styled" style="background:#f1f5f9;color:#94a3b8">
+                        Quản trị viên (Được bảo vệ)
+                    </div>
+                }
+                else
+                {
+                    <div class="role-option-grid" id="roleGrid">
+                        @{
+                            var roleData = new[]
+                            {
+                                (UserRoles.Staff,            "Quản lý đơn hàng", "Quản lý và xử lý đơn hàng",     "icon-staff", "bi-person"),
+                                (UserRoles.CustomerSupport,  "Hỗ trợ tư vấn",   "Quản lý khách hàng, đánh giá, tư vấn", "icon-staff", "bi-headset"),
+                                (UserRoles.WarehouseManager, "Quản lý kho",     "Quản lý tồn kho và hàng hóa", "icon-wm",    "bi-boxes"),
+                                (UserRoles.EmployeeManager,  "Quản lý nhân sự",  "Quản lý nhân sự và đội ngũ",   "icon-em",    "bi-people"),
+                                (UserRoles.Admin,            "Quản trị viên",    "Toàn quyền truy cập hệ thống", "icon-admin", "bi-shield-check"),
+                            };
+                        }
+                        @foreach (var (value, name, desc, iconClass, iconBi) in roleData)
+                        {
+                            bool isSelected = Model.Role == value;
+                            <label class="role-option @(isSelected ? "selected" : "")"
+                                   onclick="selectRole(this,'@value')">
+                                <input type="radio" name="role" value="@value" @(isSelected ? "checked" : "") />
+                                <div class="role-icon @iconClass"><i class="bi @iconBi"></i></div>
+                                <div class="role-name">@name</div>
+                                <div class="role-desc">@desc</div>
+                            </label>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label-styled">Trạng thái tài khoản</label>
+                @if (isPrimary)
+                {
+                    <input type="hidden" name="isActive" value="true" />
+                    <div class="form-control-styled" style="background:#f1f5f9;color:#94a3b8">
+                        Hoạt động (Được bảo vệ)
+                    </div>
+                }
+                else
+                {
+                    <div class="status-toggle" id="statusToggle">
+                        <label class="status-btn @(Model.IsActive ? "active-sel" : "")"
+                               onclick="selectStatus(this, true)">
+                            <input type="radio" name="isActive" value="true" @(Model.IsActive ? "checked" : "") />
+                            <i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>Hoạt động
+                        </label>
+                        <label class="status-btn @(!Model.IsActive ? "locked-sel" : "")"
+                               onclick="selectStatus(this, false)">
+                            <input type="radio" name="isActive" value="false" @(!Model.IsActive ? "checked" : "") />
+                            <i class="bi bi-lock-fill me-1" style="font-size:.65rem"></i>Đã khóa
+                        </label>
+                    </div>
+                }
+            </div>
+
+            <div class="d-flex gap-3 mt-4">
+                @if (!isPrimary)
+                {
+                    <button type="submit" class="btn-submit">
+                        <i class="bi bi-check-lg me-2"></i>Lưu thay đổi
+                    </button>
+                }
+                <a asp-action="Index" class="btn btn-outline-secondary rounded-3 px-4">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function selectRole(label, role) {
+        document.querySelectorAll('.role-option').forEach(el => el.classList.remove('selected'));
+        label.classList.add('selected');
+        label.querySelector('input').checked = true;
+    }
+    function selectStatus(label, isActive) {
+        document.querySelectorAll('.status-btn').forEach(el => {
+            el.classList.remove('active-sel', 'locked-sel');
+        });
+        label.classList.add(isActive ? 'active-sel' : 'locked-sel');
+        label.querySelector('input').checked = true;
+    }
+</script>
+}

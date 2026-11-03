@@ -1,0 +1,496 @@
+@using NewComputerStore.Services
+@{
+    ViewData["Title"] = "Email Diagnostics";
+    Layout = "_AdminLayout";
+
+    var smtp = ViewBag.SmtpStatus as EmailTestResult;
+    var testResult = ViewBag.TestResult as EmailTestResult;
+    bool isDev = ViewBag.IsDevelopment == true;
+    string testEmail = ViewBag.TestEmail as string ?? "";
+
+    // Determine badge state
+    string badgeClass, badgeText, badgeIcon;
+    if (smtp == null || !smtp.IsEnabled)
+    {
+        badgeClass = "badge-not-configured";
+        badgeText  = "Email Disabled";
+        badgeIcon  = "bi-dash-circle-fill";
+    }
+    else if (!smtp.IsConfigured)
+    {
+        badgeClass = "badge-not-configured";
+        badgeText  = "SMTP Not Configured";
+        badgeIcon  = "bi-exclamation-triangle-fill";
+    }
+    else if (testResult != null && !testResult.Success)
+    {
+        badgeClass = "badge-failed";
+        badgeText  = "SMTP Failed";
+        badgeIcon  = "bi-x-circle-fill";
+    }
+    else if (testResult != null && testResult.Success)
+    {
+        badgeClass = "badge-active";
+        badgeText  = "SMTP Active";
+        badgeIcon  = "bi-check-circle-fill";
+    }
+    else
+    {
+        badgeClass = "badge-unknown";
+        badgeText  = "SMTP Configured (Not Tested)";
+        badgeIcon  = "bi-question-circle-fill";
+    }
+}
+
+<style>
+    .diag-card {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 2px 16px rgba(0,0,0,.07);
+        padding: 28px 32px;
+        margin-bottom: 24px;
+    }
+    .diag-card h5 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .config-row {
+        display: flex;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #f1f2f4;
+        font-size: .9rem;
+    }
+    .config-row:last-child { border-bottom: none; }
+    .config-label {
+        width: 180px;
+        color: #888;
+        font-weight: 500;
+        flex-shrink: 0;
+    }
+    .config-value {
+        color: #1a1a2e;
+        font-weight: 600;
+        word-break: break-all;
+    }
+    /* Status badges */
+    .smtp-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 8px 18px;
+        border-radius: 50px;
+        font-size: .875rem;
+        font-weight: 700;
+        letter-spacing: .3px;
+    }
+    .badge-active         { background: #d1fae5; color: #065f46; }
+    .badge-failed         { background: #fee2e2; color: #991b1b; }
+    .badge-not-configured { background: #fef3c7; color: #92400e; }
+    .badge-unknown        { background: #e0f2fe; color: #075985; }
+
+    /* Result panels */
+    .result-success {
+        background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+        border-left: 5px solid #10b981;
+        border-radius: 12px;
+        padding: 24px 28px;
+    }
+    .result-error {
+        background: linear-gradient(135deg, #fee2e2, #fecaca);
+        border-left: 5px solid #ef4444;
+        border-radius: 12px;
+        padding: 24px 28px;
+    }
+    .error-detail-card {
+        background: #1e1e2e;
+        color: #f8f8f2;
+        border-radius: 10px;
+        padding: 16px 20px;
+        font-family: 'Courier New', monospace;
+        font-size: .82rem;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin-top: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .error-label {
+        font-size: .72rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+    }
+
+    /* Guide steps */
+    .guide-step {
+        display: flex;
+        gap: 16px;
+        padding: 16px 0;
+        border-bottom: 1px solid #f1f2f4;
+    }
+    .guide-step:last-child { border-bottom: none; }
+    .step-num {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #1a1a2e, #e94560);
+        color: #fff;
+        font-weight: 700;
+        font-size: .9rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+    .step-content h6 { font-size: .9rem; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+    .step-content p  { font-size: .85rem; color: #666; margin: 0; line-height: 1.5; }
+    .code-snippet {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-family: 'Courier New', monospace;
+        font-size: .82rem;
+        color: #e94560;
+        display: inline-block;
+        margin-top: 4px;
+    }
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #1a1a2e;
+        margin-bottom: 6px;
+    }
+    .section-subtitle {
+        color: #888;
+        font-size: .9rem;
+        margin-bottom: 28px;
+    }
+</style>
+
+<div style="padding-top: 20px; max-width: 980px; margin: 0 auto;">
+
+    <!-- Header -->
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+        <div>
+            <div class="section-title"><i class="bi bi-envelope-gear me-2 text-danger"></i>Email Diagnostics</div>
+            <div class="section-subtitle">Kiểm tra cấu hình SMTP, gửi email test và xem hướng dẫn Gmail App Password.</div>
+        </div>
+        <div>
+            <span class="smtp-badge @badgeClass">
+                <i class="bi @badgeIcon"></i> @badgeText
+            </span>
+        </div>
+    </div>
+
+    <!-- ===== SMTP CONFIG INFO ===== -->
+    <div class="diag-card">
+        <h5><i class="bi bi-sliders text-primary"></i> Cấu hình SMTP hiện tại</h5>
+
+        <div class="config-row">
+            <span class="config-label">SMTP Host</span>
+            <span class="config-value">@(smtp?.SmtpHost ?? "N/A")</span>
+        </div>
+        <div class="config-row">
+            <span class="config-label">SMTP Port</span>
+            <span class="config-value">@(smtp?.SmtpPort.ToString() ?? "N/A")
+                @if (smtp?.SmtpPort == 587)
+                {
+                    <span class="badge bg-success-subtle text-success ms-2" style="font-size:.75rem;">TLS/STARTTLS ✓</span>
+                }
+                else if (smtp?.SmtpPort == 465)
+                {
+                    <span class="badge bg-info-subtle text-info ms-2" style="font-size:.75rem;">SSL ✓</span>
+                }
+            </span>
+        </div>
+        <div class="config-row">
+            <span class="config-label">Sender Email</span>
+            <span class="config-value">
+                @if (string.IsNullOrEmpty(smtp?.SenderEmail))
+                {
+                    <span class="text-danger">⚠ Chưa cấu hình</span>
+                }
+                else
+                {
+                    @smtp.SenderEmail
+                }
+            </span>
+        </div>
+        <div class="config-row">
+            <span class="config-label">Sender Name</span>
+            <span class="config-value">@(smtp?.SenderName ?? "N/A")</span>
+        </div>
+        <div class="config-row">
+            <span class="config-label">App Password</span>
+            <span class="config-value">
+                @if (smtp?.IsConfigured == true)
+                {
+                    <span class="text-success fw-bold">● Đã cấu hình</span>
+                }
+                else
+                {
+                    <span class="text-warning fw-bold">● Chưa cấu hình (placeholder hoặc trống)</span>
+                }
+            </span>
+        </div>
+        <div class="config-row">
+            <span class="config-label">Enable Email</span>
+            <span class="config-value">
+                @if (smtp?.IsEnabled == true)
+                {
+                    <span class="badge bg-success">true</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">false</span>
+                }
+            </span>
+        </div>
+        <div class="config-row">
+            <span class="config-label">SMTP Configured</span>
+            <span class="config-value">
+                @if (smtp?.IsConfigured == true && smtp?.IsEnabled == true)
+                {
+                    <span class="smtp-badge badge-active" style="padding:4px 12px;font-size:.8rem;"><i class="bi bi-check-circle-fill"></i> Yes</span>
+                }
+                else if (smtp?.IsConfigured == true && smtp?.IsEnabled == false)
+                {
+                    <span class="smtp-badge badge-not-configured" style="padding:4px 12px;font-size:.8rem;"><i class="bi bi-dash-circle"></i> Configured but Disabled</span>
+                }
+                else
+                {
+                    <span class="smtp-badge badge-not-configured" style="padding:4px 12px;font-size:.8rem;"><i class="bi bi-exclamation-triangle-fill"></i> No</span>
+                }
+            </span>
+        </div>
+    </div>
+
+    <!-- ===== SEND TEST EMAIL ===== -->
+    <div class="diag-card">
+        <h5><i class="bi bi-send-check text-success"></i> Gửi Email Test</h5>
+        <p class="text-muted small mb-3">Gửi email thực tế qua Gmail SMTP để kiểm tra. Kết quả lỗi chi tiết sẽ hiển thị bên dưới và được lưu vào EmailLogs.</p>
+
+        <form asp-action="SendTestEmail" asp-controller="Admin" method="post" class="d-flex gap-2 flex-wrap">
+            @Html.AntiForgeryToken()
+            <input type="email" name="toEmail" id="toEmail" value="@testEmail"
+                   class="form-control rounded-3"
+                   style="max-width:360px;"
+                   placeholder="Nhập email nhận test (vd: you@gmail.com)"
+                   required />
+            <button type="submit" class="btn btn-primary rounded-3 fw-semibold px-4"
+                    @(smtp?.IsConfigured != true ? "disabled" : "")>
+                <i class="bi bi-send me-1"></i> Send Test Email
+            </button>
+            @if (smtp?.IsConfigured != true)
+            {
+                <span class="text-warning small align-self-center">
+                    <i class="bi bi-info-circle me-1"></i>Cần cấu hình SMTP trước khi test
+                </span>
+            }
+        </form>
+
+        @if (TempData["TestError"] != null)
+        {
+            <div class="alert alert-warning mt-3 rounded-3">
+                <i class="bi bi-exclamation-triangle me-2"></i>@TempData["TestError"]
+            </div>
+        }
+
+        <!-- Test Result -->
+        @if (testResult != null)
+        {
+            <div class="mt-4">
+                @if (testResult.Success)
+                {
+                    <div class="result-success">
+                        <div class="d-flex align-items-center gap-3 mb-2">
+                            <i class="bi bi-check-circle-fill text-success fs-3"></i>
+                            <div>
+                                <div class="fw-bold text-success fs-6">Email gửi thành công! 🎉</div>
+                                <div class="small text-muted">Email test đã được gửi tới <strong>@testEmail</strong>. Kiểm tra hộp thư của bạn.</div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-4 mt-2 small text-success">
+                            <span><i class="bi bi-server me-1"></i>@testResult.SmtpHost:@testResult.SmtpPort</span>
+                            <span><i class="bi bi-envelope me-1"></i>@testResult.SenderEmail</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="result-error">
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <i class="bi bi-x-circle-fill text-danger fs-3"></i>
+                            <div>
+                                <div class="fw-bold text-danger fs-6">Gửi email thất bại</div>
+                                <div class="small text-muted">Email tới <strong>@testEmail</strong> không thể gửi được. Chi tiết lỗi bên dưới.</div>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(testResult.SmtpErrorCode))
+                        {
+                            <div class="mb-2">
+                                <span class="badge bg-danger">SMTP Status Code: @testResult.SmtpErrorCode</span>
+                            </div>
+                        }
+
+                        <div class="error-label text-danger">Exception.Message</div>
+                        <div class="error-detail-card" style="max-height:120px;">@testResult.ErrorMessage</div>
+
+                        @if (!string.IsNullOrEmpty(testResult.InnerErrorMessage))
+                        {
+                            <div class="error-label text-warning mt-3">InnerException.Message</div>
+                            <div class="error-detail-card" style="max-height:100px;">@testResult.InnerErrorMessage</div>
+                        }
+
+                        @if (isDev && !string.IsNullOrEmpty(testResult.StackTrace))
+                        {
+                            <div class="error-label text-muted mt-3">StackTrace (Development Mode)</div>
+                            <div class="error-detail-card">@testResult.StackTrace</div>
+                        }
+
+                        <!-- Common fix hints -->
+                        <div class="mt-3 p-3 rounded-3" style="background:rgba(0,0,0,.05);">
+                            <div class="fw-bold small mb-2"><i class="bi bi-lightbulb-fill text-warning me-1"></i>Nguyên nhân phổ biến & cách khắc phục:</div>
+                            <ul class="small text-muted mb-0" style="line-height:1.8;">
+                                <li><strong>Authentication failed / 5.7.8</strong> → App Password sai hoặc chưa bật 2-Step Verification trên Gmail.</li>
+                                <li><strong>Connection timeout</strong> → Firewall chặn port 587. Thử port 465 hoặc dùng VPN.</li>
+                                <li><strong>Less secure app</strong> → Gmail đã tắt "Less secure apps". Bắt buộc phải dùng App Password.</li>
+                                <li><strong>SmtpException [MustIssueStartTlsFirst]</strong> → EnableSsl chưa bật hoặc sai port. Dùng port 587 + EnableSsl=true.</li>
+                            </ul>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- ===== GMAIL APP PASSWORD GUIDE ===== -->
+    <div class="diag-card">
+        <h5><i class="bi bi-book-half text-warning"></i> Hướng dẫn cấu hình Gmail App Password</h5>
+        <div class="alert alert-info border-0 rounded-3 mb-4 small">
+            <i class="bi bi-info-circle me-2"></i>
+            Gmail App Password là mật khẩu 16 ký tự do Google tạo ra, dùng thay cho mật khẩu thường để ứng dụng bên thứ ba (như hệ thống này) gửi email qua SMTP. <strong>Bắt buộc phải bật 2-Step Verification mới tạo được.</strong>
+        </div>
+
+        <div class="guide-step">
+            <div class="step-num">1</div>
+            <div class="step-content">
+                <h6>Bật 2-Step Verification trên tài khoản Gmail</h6>
+                <p>Truy cập <a href="https://myaccount.google.com/security" target="_blank" class="text-primary">myaccount.google.com/security</a>, tìm mục <strong>"2-Step Verification"</strong> và bật lên. Đây là điều kiện bắt buộc để tạo App Password.</p>
+            </div>
+        </div>
+
+        <div class="guide-step">
+            <div class="step-num">2</div>
+            <div class="step-content">
+                <h6>Tạo App Password</h6>
+                <p>Sau khi bật 2-Step, truy cập <a href="https://myaccount.google.com/apppasswords" target="_blank" class="text-primary">myaccount.google.com/apppasswords</a>. Đặt tên ứng dụng (ví dụ: <em>NewComputerStore</em>), nhấn <strong>Create</strong>.</p>
+                <p class="mt-1">Google sẽ cấp cho bạn một mật khẩu 16 ký tự dạng: <span class="code-snippet">abcd efgh ijkl mnop</span></p>
+            </div>
+        </div>
+
+        <div class="guide-step">
+            <div class="step-num">3</div>
+            <div class="step-content">
+                <h6>Điền vào <code>appsettings.json</code></h6>
+                <p>Mở file <strong>appsettings.json</strong> và điền như sau (giữ nguyên dấu cách trong mật khẩu):</p>
+                <pre class="code-snippet d-block mt-2 py-2 px-3" style="white-space:pre;color:#1a1a2e;background:#f8fafc;border-radius:8px;font-size:.82rem;">"EmailSettings": {
+  "SmtpServer": "smtp.gmail.com",
+  "SmtpPort": 587,
+  "SenderEmail": "your-email@gmail.com",
+  "SenderName": "NewComputerStore",
+  "Password": "abcd efgh ijkl mnop",
+  "EnableEmail": true
+}</pre>
+            </div>
+        </div>
+
+        <div class="guide-step">
+            <div class="step-num">4</div>
+            <div class="step-content">
+                <h6>Khởi động lại ứng dụng và test</h6>
+                <p>Sau khi lưu <code>appsettings.json</code>, khởi động lại ứng dụng (Ctrl+C rồi <span class="code-snippet">dotnet run</span>). Quay lại trang này và nhấn <strong>Send Test Email</strong> để xác nhận SMTP hoạt động.</p>
+            </div>
+        </div>
+
+        <div class="guide-step">
+            <div class="step-num">5</div>
+            <div class="step-content">
+                <h6>Kiểm tra kết quả trong Email Logs</h6>
+                <p>Mọi email gửi đi (kể cả thất bại) đều được lưu tại <a asp-controller="Admin" asp-action="EmailLogs" class="text-primary">Lịch sử gửi Email</a>. Xem cột <strong>ErrorMessage</strong> để biết chi tiết lỗi SMTP.</p>
+            </div>
+        </div>
+
+        <!-- Quick config check table -->
+        <div class="mt-3 pt-2">
+            <div class="fw-bold small mb-2 text-muted">Bảng tham chiếu nhanh:</div>
+            <table class="table table-sm table-bordered rounded-3 overflow-hidden" style="font-size:.85rem;">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Cài đặt</th>
+                        <th>Giá trị đúng cho Gmail</th>
+                        <th>Giá trị hiện tại</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>SmtpServer</td>
+                        <td><code>smtp.gmail.com</code></td>
+                        <td><code>@smtp?.SmtpHost</code></td>
+                        <td>@(smtp?.SmtpHost == "smtp.gmail.com" ? "✅" : "⚠ Khác")</td>
+                    </tr>
+                    <tr>
+                        <td>SmtpPort</td>
+                        <td><code>587</code> (TLS) hoặc <code>465</code> (SSL)</td>
+                        <td><code>@smtp?.SmtpPort</code></td>
+                        <td>@(smtp?.SmtpPort is 587 or 465 ? "✅" : "⚠ Kiểm tra lại")</td>
+                    </tr>
+                    <tr>
+                        <td>SenderEmail</td>
+                        <td>Email Gmail hợp lệ</td>
+                        <td><code>@(string.IsNullOrEmpty(smtp?.SenderEmail) ? "(trống)" : smtp.SenderEmail)</code></td>
+                        <td>@(!string.IsNullOrEmpty(smtp?.SenderEmail) ? "✅" : "❌ Chưa điền")</td>
+                    </tr>
+                    <tr>
+                        <td>Password</td>
+                        <td>16-char App Password từ Google</td>
+                        <td><code>@(smtp?.IsConfigured == true ? "●●●● ●●●● ●●●● ●●●●" : "(chưa cấu hình)")</code></td>
+                        <td>@(smtp?.IsConfigured == true ? "✅" : "❌ Dùng placeholder")</td>
+                    </tr>
+                    <tr>
+                        <td>EnableEmail</td>
+                        <td><code>true</code></td>
+                        <td><code>@(smtp?.IsEnabled.ToString().ToLower())</code></td>
+                        <td>@(smtp?.IsEnabled == true ? "✅" : "❌ Đang tắt")</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ===== QUICK LINKS ===== -->
+    <div class="d-flex gap-3 flex-wrap mb-4">
+        <a asp-controller="Admin" asp-action="EmailLogs" class="btn btn-outline-primary rounded-3">
+            <i class="bi bi-envelope-paper me-1"></i> Xem Email Logs
+        </a>
+        <a href="https://myaccount.google.com/apppasswords" target="_blank" class="btn btn-outline-danger rounded-3">
+            <i class="bi bi-google me-1"></i> Tạo Gmail App Password
+        </a>
+        <a href="https://myaccount.google.com/security" target="_blank" class="btn btn-outline-secondary rounded-3">
+            <i class="bi bi-shield-check me-1"></i> Bảo mật Google Account
+        </a>
+    </div>
+
+</div>

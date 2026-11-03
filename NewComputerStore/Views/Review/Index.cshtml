@@ -1,0 +1,72 @@
+@using NewComputerStore.Helpers
+@model IEnumerable<NewComputerStore.Models.Review>
+
+@{
+    ViewData["Title"] = LocalizationHelper.T("Customer Reviews");
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">@LocalizationHelper.T("Customer Reviews")</h2>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th class="ps-4">@LocalizationHelper.T("Product Name")</th>
+                    <th>@LocalizationHelper.T("Customer")</th>
+                    <th>@LocalizationHelper.T("Rating")</th>
+                    <th>@LocalizationHelper.T("Comment")</th>
+                    <th class="text-center">@LocalizationHelper.T("Actions")</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-bold">@item.Product?.ProductName</div>
+                        </td>
+                        <td>
+                            <div>@item.User?.FullName</div>
+                            <div class="small text-muted">@item.User?.Email</div>
+                        </td>
+                        <td>
+                            <div class="text-warning">
+                                @for (int i = 0; i < item.Rating; i++)
+                                {
+                                    <i class="bi bi-star-fill"></i>
+                                }
+                                @for (int i = item.Rating; i < 5; i++)
+                                {
+                                    <i class="bi bi-star"></i>
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-wrap" style="max-width: 300px;">@item.Comment</div>
+                        </td>
+                        <td class="text-center pe-4">
+                            <form asp-action="Delete" asp-route-id="@item.ReviewId" method="post" onsubmit="return confirm('@LocalizationHelper.T("Are you sure you want to delete this review?")')">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                    <i class="bi bi-trash me-1"></i> @LocalizationHelper.T("Delete")
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted fst-italic">
+                            Chưa có đánh giá nào từ khách hàng.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

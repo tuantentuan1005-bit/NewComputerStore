@@ -1,0 +1,423 @@
+@model IEnumerable<NewComputerStore.Models.User>
+@{
+    ViewData["Title"] = LocalizationHelper.T("Customers");
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    int currentPage = ViewBag.CurrentPage;
+    int totalPages  = ViewBag.TotalPages;
+    string search   = ViewBag.Search ?? "";
+    string status   = ViewBag.Status ?? "";
+    int totalCount  = ViewBag.TotalCount;
+}
+
+<style>
+    .page-header-bar {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        border-radius: 16px;
+        padding: 24px 28px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+    .page-header-bar h1 { color: #fff; font-size: 1.5rem; font-weight: 700; margin: 0; }
+    .page-header-bar .subtitle { color: #8892a4; font-size: .875rem; margin-top: 2px; }
+
+    .stat-chip {
+        background: rgba(255,255,255,.08);
+        border: 1px solid rgba(255,255,255,.1);
+        border-radius: 10px;
+        padding: 8px 18px;
+        color: #fff;
+        font-size: .85rem;
+        font-weight: 600;
+    }
+
+    .filter-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 18px 22px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 12px rgba(0,0,0,.06);
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+    }
+    .filter-card label { font-size: .78rem; font-weight: 600; color: #6c757d; margin-bottom: 4px; display: block; }
+    .filter-card .form-control,
+    .filter-card .form-select {
+        border-radius: 8px;
+        border: 1px solid #e0e6ef;
+        font-size: .875rem;
+        height: 38px;
+    }
+
+    .data-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 2px 16px rgba(0,0,0,.07);
+        overflow: hidden;
+    }
+    .data-card table thead th {
+        background: #f8f9fc;
+        font-size: .72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .8px;
+        color: #8892a4;
+        border-bottom: 2px solid #e9ecef;
+        padding: 14px 16px;
+    }
+    .data-card table tbody tr {
+        transition: background .15s;
+    }
+    .data-card table tbody tr:hover { background: #f8f9fd; }
+    .data-card table tbody td {
+        padding: 14px 16px;
+        vertical-align: middle;
+        border-bottom: 1px solid #f0f2f5;
+        font-size: .875rem;
+    }
+
+    .user-avatar {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: #fff;
+        font-weight: 700;
+        font-size: .85rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .badge-role-customer {
+        background: #e9ecef;
+        color: #6c757d;
+        font-size: .7rem;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 20px;
+        letter-spacing: .3px;
+    }
+
+    .badge-active {
+        background: #d1fae5; color: #065f46;
+        font-size: .7rem; font-weight: 700;
+        padding: 4px 10px; border-radius: 20px;
+    }
+    .badge-locked {
+        background: #fee2e2; color: #991b1b;
+        font-size: .7rem; font-weight: 700;
+        padding: 4px 10px; border-radius: 20px;
+    }
+
+    .btn-action {
+        border-radius: 8px;
+        font-size: .78rem;
+        font-weight: 600;
+        padding: 5px 12px;
+        border: 1.5px solid transparent;
+        transition: all .2s;
+    }
+    .btn-info-soft {
+        background: #eff6ff; color: #1d4ed8;
+        border-color: #bfdbfe;
+    }
+    .btn-info-soft:hover { background: #dbeafe; }
+    .btn-danger-soft {
+        background: #fff1f2; color: #be123c;
+        border-color: #fecdd3;
+    }
+    .btn-danger-soft:hover { background: #ffe4e8; }
+    .btn-success-soft {
+        background: #f0fdf4; color: #15803d;
+        border-color: #bbf7d0;
+    }
+    .btn-success-soft:hover { background: #dcfce7; }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #8892a4;
+    }
+    .empty-state i { font-size: 3rem; margin-bottom: 16px; display: block; opacity: .4; }
+</style>
+
+<!-- Page Header -->
+<div class="page-header-bar">
+    <div>
+        <h1><i class="bi bi-person-heart me-2"></i>Khách hàng</h1>
+        <div class="subtitle">Quản lý tài khoản khách hàng, khóa/mở khóa truy cập</div>
+    </div>
+    <div class="stat-chip">
+        <i class="bi bi-people me-1"></i>@totalCount khách hàng
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show rounded-3 mb-3" role="alert">
+        <i class="bi bi-check-circle me-2"></i>@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show rounded-3 mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Filters -->
+<form method="get" asp-action="Index">
+    <div class="filter-card">
+        <div style="flex:1; min-width:200px">
+            <label>@LocalizationHelper.T("Search")</label>
+            <input type="text" name="search" value="@search" class="form-control"
+                   placeholder="Tên hoặc Email..." />
+        </div>
+        <div style="min-width:140px">
+            <label>@LocalizationHelper.T("Status")</label>
+            <select name="status" class="form-select">
+                <option value="" selected="@(status == "")">Tất cả trạng thái</option>
+                <option value="active" selected="@(status == "active")">Hoạt động</option>
+                <option value="locked" selected="@(status == "locked")">Đã khóa</option>
+            </select>
+        </div>
+        <div class="d-flex gap-2 align-items-end">
+            <button type="submit" class="btn btn-primary btn-action">
+                <i class="bi bi-search me-1"></i>Tìm kiếm
+            </button>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-action">Xóa bộ lọc</a>
+        </div>
+    </div>
+</form>
+
+<!-- Data Table -->
+<div class="data-card">
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Khách hàng</th>
+                    <th>Email</th>
+                    <th>Vai trò</th>
+                    <th>Đơn hàng</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <i class="bi bi-inbox"></i>
+                                Không tìm thấy khách hàng nào phù hợp với bộ lọc.
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td class="text-muted fw-semibold">@item.UserId</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="user-avatar">@item.FullName.Substring(0, 1).ToUpper()</div>
+                                <span class="fw-semibold">@item.FullName</span>
+                            </div>
+                        </td>
+                        <td class="text-muted">@item.Email</td>
+                        <td><span class="badge-role-customer">Khách hàng</span></td>
+                        <td>
+                            <span class="fw-semibold">@(item.Orders?.Count ?? 0)</span>
+                            <span class="text-muted" style="font-size:.8rem"> đơn hàng</span>
+                        </td>
+                        <td>
+                            @if (item.IsActive)
+                            {
+                                <span class="badge-active"><i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>Hoạt động</span>
+                            }
+                            else
+                            {
+                                <span class="badge-locked"><i class="bi bi-lock-fill me-1" style="font-size:.6rem"></i>Đã khóa</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end gap-2">
+                                <a asp-action="Details" asp-route-id="@item.UserId"
+                                   class="btn-action btn-info-soft">
+                                    <i class="bi bi-eye me-1"></i>Chi tiết
+                                </a>
+                                @if (item.Email != "admin@store.com")
+                                {
+                                    <form asp-action="ToggleActive" asp-route-id="@item.UserId" method="post" class="m-0">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="returnSearch" value="@search" />
+                                        <input type="hidden" name="returnStatus" value="@status" />
+                                        <input type="hidden" name="returnPage" value="@currentPage" />
+                                        @if (item.IsActive)
+                                        {
+                                            <button type="submit" class="btn-action btn-danger-soft"
+                                                    onclick="return confirm('Khóa tài khoản của @item.FullName?')">
+                                                <i class="bi bi-lock me-1"></i>Khóa
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn-action btn-success-soft">
+                                                <i class="bi bi-unlock me-1"></i>Mở khóa
+                                            </button>
+                                        }
+                                    </form>
+                                }
+                                @if (User.IsInRole("Admin") && item.Email != "admin@store.com")
+                                {
+                                    <button type="button" class="btn-action btn btn-sm btn-danger btn-delete-customer"
+                                            data-id="@item.UserId" data-name="@item.FullName" data-email="@item.Email">
+                                        <i class="bi bi-trash fa-trash me-1"></i>Xóa
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (totalPages > 1)
+    {
+        <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top">
+            <span class="text-muted" style="font-size:.8rem">
+                Page @currentPage of @totalPages
+            </span>
+            <nav>
+                <ul class="pagination pagination-sm mb-0 gap-1">
+                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                        <a class="page-link rounded-2" asp-action="Index"
+                           asp-route-page="@(currentPage - 1)" asp-route-search="@search"
+                           asp-route-status="@status">‹</a>
+                    </li>
+                    @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+                    {
+                        <li class="page-item @(i == currentPage ? "active" : "")">
+                            <a class="page-link rounded-2" asp-action="Index"
+                               asp-route-page="@i" asp-route-search="@search"
+                               asp-route-status="@status">@i</a>
+                        </li>
+                    }
+                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                        <a class="page-link rounded-2" asp-action="Index"
+                           asp-route-page="@(currentPage + 1)" asp-route-search="@search"
+                           asp-route-status="@status">›</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        $(document).ready(function() {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+
+            $('.btn-delete-customer').on('click', function() {
+                const customerId = $(this).data('id');
+                const customerName = $(this).data('name');
+                const customerEmail = $(this).data('email');
+                const button = $(this);
+                const row = button.closest('tr');
+
+                Swal.fire({
+                    title: 'Bạn có chắc chắn?',
+                    text: `Bạn có chắc muốn xóa khách hàng "${customerName}" (${customerEmail}) không?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Đồng ý xóa',
+                    cancelButtonText: 'Hủy'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const token = $('input[name="__RequestVerificationToken"]').first().val();
+
+                        $.ajax({
+                            url: `/Admin/Customers/Delete/${customerId}`,
+                            type: 'POST',
+                            data: {
+                                __RequestVerificationToken: token
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    Toast.fire({
+                                        icon: 'success',
+                                        title: response.message
+                                    });
+                                    row.fadeOut(600, function() {
+                                        row.remove();
+                                        
+                                        // Update total count chip
+                                        const countChip = $('.stat-chip');
+                                        if (countChip.length) {
+                                            const text = countChip.text().trim();
+                                            const match = text.match(/(\d+)/);
+                                            if (match) {
+                                                const newCount = parseInt(match[1]) - 1;
+                                                countChip.html(`<i class="bi bi-people me-1"></i>${newCount} khách hàng`);
+                                            }
+                                        }
+
+                                        // Show empty state if no rows left
+                                        if ($('tbody tr').length === 0) {
+                                            $('tbody').html(`
+                                                <tr>
+                                                    <td colspan="7">
+                                                        <div class="empty-state">
+                                                            <i class="bi bi-inbox"></i>
+                                                            Không tìm thấy khách hàng nào phù hợp với bộ lọc.
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            `);
+                                        }
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Lỗi',
+                                        text: response.message,
+                                        confirmButtonColor: '#3085d6'
+                                    });
+                                }
+                            },
+                            error: function() {
+                                Toast.fire({
+                                    icon: 'error',
+                                    title: 'Lỗi hệ thống khi xóa khách hàng.'
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+}

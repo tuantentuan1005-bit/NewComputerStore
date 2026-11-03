@@ -1,0 +1,185 @@
+@model IEnumerable<NewComputerStore.Models.Product>
+
+@using NewComputerStore.Helpers
+@{
+    ViewData["Title"] = LocalizationHelper.T("Products");
+    var categories = ViewBag.Categories as List<NewComputerStore.Models.Category>;
+    int currentPage = ViewBag.CurrentPage;
+    int totalPages = ViewBag.TotalPages;
+}
+
+<div class="container py-5">
+    <div class="row mb-5">
+        <div class="col-12 text-center">
+            <h2 class="fw-bold mb-3">@LocalizationHelper.T("All Products")</h2>
+            <p class="text-muted">@LocalizationHelper.T("Find the perfect component for your next build")</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Sidebar filters -->
+        <div class="col-lg-3 mb-4">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-funnel-fill text-primary"></i> @LocalizationHelper.T("Filters")</h5>
+                    
+                    <form asp-action="Index" method="get">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">@LocalizationHelper.T("Real-time Search")</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                <input type="text" id="realTimeSearch" class="form-control border-start-0" placeholder="@LocalizationHelper.T("Type to filter...")" />
+                            </div>
+                            <div class="form-text mt-1 text-muted small">@LocalizationHelper.T("Filters items on this page instantly.")</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">@LocalizationHelper.T("Global Search")</label>
+                            <input type="text" name="searchString" value="@ViewData["CurrentFilter"]" class="form-control" placeholder="@LocalizationHelper.T("Search all products...")" />
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">@LocalizationHelper.T("Category")</label>
+                            <select name="categoryId" class="form-select">
+                                <option value="">@LocalizationHelper.T("All Categories")</option>
+                                @if (categories != null)
+                                {
+                                    foreach (var cat in categories)
+                                    {
+                                        var selected = ViewData["CurrentCategory"]?.ToString() == cat.CategoryId.ToString() ? "selected" : "";
+                                        @Html.Raw($"<option value='{cat.CategoryId}' {selected}>{cat.CategoryName}</option>")
+                                    }
+                                }
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-gradient w-100">@LocalizationHelper.T("Apply Filters")</button>
+                        <a asp-action="Index" class="btn btn-light mt-2 w-100 fw-bold text-muted">@LocalizationHelper.T("Reset")</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Grid -->
+        <div class="col-lg-9">
+            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 animate-in">
+                @if (Model.Any())
+                {
+                    @foreach (var item in Model)
+                    {
+                        <div class="col">
+                            <div class="card product-card h-100 position-relative">
+                                @if(item.Category != null)
+                                {
+                                    <span class="position-absolute top-0 start-0 m-3 badge badge-category z-1">
+                                        @item.Category.CategoryName
+                                    </span>
+                                }
+                                <a asp-action="Details" asp-route-id="@item.ProductId" class="product-img-wrapper">
+                                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                    {
+                                        <img src="~/images/@item.ImageUrl" alt="@item.ProductName" />
+                                    }
+                                    else
+                                    {
+                                        <img src="https://via.placeholder.com/300x250?text=No+Image" alt="No image available" />
+                                    }
+                                </a>
+                                <div class="card-body d-flex flex-column p-4">
+                                    <a asp-action="Details" asp-route-id="@item.ProductId" class="product-title mb-1 flex-grow-1 text-truncate" title="@item.ProductName">
+                                        @item.ProductName
+                                    </a>
+                                    <div class="mb-2">
+                                        @if (item.ProductColors != null && item.ProductColors.Any())
+                                        {
+                                            foreach (var pc in item.ProductColors)
+                                            {
+                                                <span style="display:inline-block; width:12px; height:12px; background-color:@pc.ColorCode; border-radius:50%; border:1px solid #ddd;" title="@pc.ColorName"></span>
+                                            }
+                                        }
+                                    </div>
+                                    <div class="mt-3 text-center">
+                                        @if (item.DiscountPercent > 0)
+                                        {
+                                            <div>
+                                                <span class="text-decoration-line-through text-muted small">@LocalizationHelper.FormatCurrency(item.Price)</span>
+                                                <span class="badge bg-danger ms-1 small">-@item.DiscountPercent.ToString("0")%</span>
+                                            </div>
+                                            <span class="product-price fs-5 text-danger fw-bold">@LocalizationHelper.FormatCurrency(item.FinalPrice)</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="product-price fs-5">@LocalizationHelper.FormatCurrency(item.FinalPrice)</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="col-12 text-center py-5">
+                        <i class="bi bi-exclamation-circle text-muted" style="font-size: 3rem;"></i>
+                        <h4 class="mt-3 text-muted">@LocalizationHelper.T("No products found matching your criteria.")</h4>
+                    </div>
+                }
+            </div>
+
+            <!-- Pagination -->
+            @if (totalPages > 1)
+            {
+                <nav class="mt-5 d-flex justify-content-center">
+                    <ul class="pagination pagination-lg shadow-sm">
+                        @for (int i = 1; i <= totalPages; i++)
+                        {
+                            <li class="page-item @(currentPage == i ? "active" : "")">
+                                <a class="page-link" asp-action="Index" 
+                                   asp-route-pageNumber="@i" 
+                                   asp-route-searchString="@ViewData["CurrentFilter"]" 
+                                   asp-route-categoryId="@ViewData["CurrentCategory"]">
+                                    @i
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            }
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script>
+        document.getElementById('realTimeSearch').addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            const productCards = document.querySelectorAll('.product-card');
+            
+            productCards.forEach(card => {
+                const title = card.querySelector('.product-title').textContent.toLowerCase();
+                const container = card.closest('.col');
+                
+                if (title.includes(query)) {
+                    container.style.display = '';
+                } else {
+                    container.style.display = 'none';
+                }
+            });
+            
+            // Check if all are hidden
+            const visibleCards = Array.from(productCards).filter(c => c.closest('.col').style.display !== 'none');
+            const noResultsMsg = document.getElementById('noRealTimeResults');
+            
+            if (visibleCards.length === 0 && query !== "") {
+                if (!noResultsMsg) {
+                    const msg = document.createElement('div');
+                    msg.id = 'noRealTimeResults';
+                    msg.className = 'col-12 text-center py-5';
+                    msg.innerHTML = '<i class="bi bi-search text-muted fs-1"></i><h4 class="mt-3 text-muted">@LocalizationHelper.T("No matches found on this page.")</h4>';
+                    document.querySelector('.animate-in').appendChild(msg);
+                }
+            } else if (noResultsMsg) {
+                noResultsMsg.remove();
+            }
+        });
+    </script>
+}

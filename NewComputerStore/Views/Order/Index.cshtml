@@ -1,0 +1,65 @@
+@model IEnumerable<NewComputerStore.Models.Order>
+
+@using NewComputerStore.Helpers
+@{
+    ViewData["Title"] = LocalizationHelper.T("My Orders");
+}
+
+<div class="container py-5 animate-in">
+    <h1 class="fw-bold mb-4"><i class="bi bi-clock-history"></i> @LocalizationHelper.T("My Order History")</h1>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info rounded-4 p-4 shadow-sm border-0 fs-5">
+            @LocalizationHelper.T("You haven't placed any orders yet.") 
+            <a asp-controller="Product" asp-action="Index" class="fw-bold">@LocalizationHelper.T("Start shopping now!")</a>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered shadow-sm bg-white rounded-3 overflow-hidden">
+                <thead class="table-light">
+                    <tr>
+                        <th class="py-3 px-4">@LocalizationHelper.T("Order ID")</th>
+                        <th class="py-3 px-4">@LocalizationHelper.T("Date")</th>
+                        <th class="py-3 px-4 text-end">@LocalizationHelper.T("Total Price")</th>
+                        <th class="py-3 px-4 text-center">@LocalizationHelper.T("Status")</th>
+                        <th class="py-3 px-4 text-center">@LocalizationHelper.T("Action")</th>
+                    </tr>
+                </thead>
+                <tbody class="border-top-0">
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="py-3 px-4 align-middle fw-bold">#@item.OrderId</td>
+                            <td class="py-3 px-4 align-middle">@LocalizationHelper.FormatDate(item.OrderDate)</td>
+                            <td class="py-3 px-4 align-middle text-end fw-bold text-primary">@LocalizationHelper.FormatCurrency(item.TotalPrice)</td>
+                            <td class="py-3 px-4 align-middle text-center">
+                                @if(item.Status == "Pending")
+                                {
+                                    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill"><i class="bi bi-hourglass-split"></i> @LocalizationHelper.T(item.Status)</span>
+                                }
+                                else if(item.Status == "Completed" || item.Status == "Delivered")
+                                {
+                                    <span class="badge bg-success px-3 py-2 rounded-pill"><i class="bi bi-check-circle"></i> @LocalizationHelper.T(item.Status)</span>
+                                }
+                                else if(item.Status == "Cancelled")
+                                {
+                                    <span class="badge bg-danger px-3 py-2 rounded-pill"><i class="bi bi-x-circle"></i> @LocalizationHelper.T(item.Status)</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary px-3 py-2 rounded-pill">@LocalizationHelper.T(item.Status)</span>
+                                }
+                            </td>
+                            <td class="py-3 px-4 align-middle text-center">
+                                <a asp-action="Details" asp-route-id="@item.OrderId" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">@LocalizationHelper.T("View Details")</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

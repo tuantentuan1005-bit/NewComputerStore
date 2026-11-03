@@ -1,0 +1,210 @@
+@using NewComputerStore.Models
+@{
+    ViewData["Title"] = "Tạo tài khoản nhân viên";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 4px 24px rgba(0,0,0,.08);
+        overflow: hidden;
+        max-width: 580px;
+    }
+    .form-card-header {
+        background: linear-gradient(135deg, #0f3460, #1a1a2e);
+        padding: 24px 32px;
+        color: #fff;
+    }
+    .form-card-header h4 { margin: 0; font-weight: 700; font-size: 1.1rem; }
+    .form-card-header p  { margin: 4px 0 0; color: #8892a4; font-size: .85rem; }
+    .form-card-body { padding: 32px; }
+
+    .form-label-styled {
+        font-size: .78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .7px;
+        color: #6c757d;
+        margin-bottom: 6px;
+    }
+    .form-control-styled, .form-select-styled {
+        border-radius: 10px;
+        border: 1.5px solid #e0e6ef;
+        padding: 10px 14px;
+        font-size: .9rem;
+        transition: border-color .2s, box-shadow .2s;
+        width: 100%;
+    }
+    .form-control-styled:focus, .form-select-styled:focus {
+        border-color: #0f3460;
+        box-shadow: 0 0 0 3px rgba(15,52,96,.12);
+        outline: none;
+    }
+
+    .role-option-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    .role-option {
+        border: 2px solid #e0e6ef;
+        border-radius: 12px;
+        padding: 14px;
+        cursor: pointer;
+        transition: all .2s;
+        position: relative;
+    }
+    .role-option:hover { border-color: #0f3460; background: #f8faff; }
+    .role-option input[type=radio] { position: absolute; opacity: 0; }
+    .role-option.selected { border-color: #0f3460; background: #eff6ff; }
+    .role-option .role-icon {
+        width: 34px; height: 34px;
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1rem;
+        margin-bottom: 8px;
+        color: #fff;
+    }
+    .role-option .role-name { font-size: .85rem; font-weight: 700; color: #1a1a2e; }
+    .role-option .role-desc { font-size: .72rem; color: #8892a4; margin-top: 2px; }
+
+    .icon-staff  { background: linear-gradient(135deg,#3b82f6,#1d4ed8); }
+    .icon-wm     { background: linear-gradient(135deg,#8b5cf6,#6d28d9); }
+    .icon-em     { background: linear-gradient(135deg,#f59e0b,#d97706); }
+    .icon-admin  { background: linear-gradient(135deg,#ef4444,#b91c1c); }
+
+    .btn-submit {
+        background: linear-gradient(135deg, #0f3460, #1a1a2e);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        padding: 12px 32px;
+        font-size: .9rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: opacity .2s, transform .15s;
+    }
+    .btn-submit:hover { opacity: .9; transform: translateY(-1px); }
+
+    .text-danger-msg { color: #be123c; font-size: .8rem; margin-top: 4px; }
+</style>
+
+<div class="mb-3">
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-3">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách
+    </a>
+</div>
+
+<div class="form-card">
+    <div class="form-card-header">
+        <h4><i class="bi bi-person-plus me-2"></i>Tạo tài khoản nhân viên mới</h4>
+        <p>Điền thông tin chi tiết để thêm thành viên mới vào hệ thống</p>
+    </div>
+    <div class="form-card-body">
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger rounded-3 mb-4">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                {
+                    <div>@error.ErrorMessage</div>
+                }
+            </div>
+        }
+
+        <form method="post" asp-action="Create">
+            @Html.AntiForgeryToken()
+
+            <div class="mb-4">
+                <label class="form-label-styled">Họ và tên</label>
+                <input type="text" name="fullName" class="form-control-styled"
+                       placeholder="Nhập họ và tên đầy đủ" required />
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label-styled">Địa chỉ Email</label>
+                <input type="email" name="email" class="form-control-styled"
+                       placeholder="Nhập email công việc" required />
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label-styled">Mật khẩu</label>
+                <div style="position:relative">
+                    <input type="password" name="password" id="passwordInput" class="form-control-styled"
+                           placeholder="Thiết lập mật khẩu" required minlength="6" style="padding-right:44px" />
+                    <button type="button" onclick="togglePwd()" tabindex="-1"
+                            style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:#8892a4;cursor:pointer">
+                        <i class="bi bi-eye" id="eyeIcon"></i>
+                    </button>
+                </div>
+                <div style="font-size:.75rem;color:#8892a4;margin-top:4px">Tối thiểu 6 ký tự</div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label-styled">Gán vai trò</label>
+                <div class="role-option-grid" id="roleGrid">
+                    <label class="role-option selected" onclick="selectRole(this,'@UserRoles.Staff')">
+                        <input type="radio" name="role" value="@UserRoles.Staff" checked />
+                        <div class="role-icon icon-staff"><i class="bi bi-person"></i></div>
+                        <div class="role-name">Quản lý đơn hàng</div>
+                        <div class="role-desc">Quản lý và xử lý đơn hàng</div>
+                    </label>
+                    <label class="role-option" onclick="selectRole(this,'@UserRoles.CustomerSupport')">
+                        <input type="radio" name="role" value="@UserRoles.CustomerSupport" />
+                        <div class="role-icon icon-staff" style="background: linear-gradient(135deg, #10b981, #059669);"><i class="bi bi-headset"></i></div>
+                        <div class="role-name">Hỗ trợ tư vấn</div>
+                        <div class="role-desc">Quản lý khách hàng, đánh giá, tư vấn</div>
+                    </label>
+                    <label class="role-option" onclick="selectRole(this,'@UserRoles.WarehouseManager')">
+                        <input type="radio" name="role" value="@UserRoles.WarehouseManager" />
+                        <div class="role-icon icon-wm"><i class="bi bi-boxes"></i></div>
+                        <div class="role-name">Quản lý kho</div>
+                        <div class="role-desc">Quản lý tồn kho và hàng hóa</div>
+                    </label>
+                    <label class="role-option" onclick="selectRole(this,'@UserRoles.EmployeeManager')">
+                        <input type="radio" name="role" value="@UserRoles.EmployeeManager" />
+                        <div class="role-icon icon-em"><i class="bi bi-people"></i></div>
+                        <div class="role-name">Quản lý nhân sự</div>
+                        <div class="role-desc">Quản lý nhân sự và đội ngũ</div>
+                    </label>
+                    <label class="role-option" onclick="selectRole(this,'@UserRoles.Admin')">
+                        <input type="radio" name="role" value="@UserRoles.Admin" />
+                        <div class="role-icon icon-admin"><i class="bi bi-shield-check"></i></div>
+                        <div class="role-name">Quản trị viên</div>
+                        <div class="role-desc">Toàn quyền truy cập hệ thống</div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="d-flex gap-3 mt-4">
+                <button type="submit" class="btn-submit">
+                    <i class="bi bi-check-lg me-2"></i>Tạo tài khoản
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary rounded-3 px-4">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function selectRole(label, role) {
+        document.querySelectorAll('.role-option').forEach(el => el.classList.remove('selected'));
+        label.classList.add('selected');
+        label.querySelector('input').checked = true;
+    }
+    function togglePwd() {
+        const inp = document.getElementById('passwordInput');
+        const icon = document.getElementById('eyeIcon');
+        if (inp.type === 'password') {
+            inp.type = 'text';
+            icon.className = 'bi bi-eye-slash';
+        } else {
+            inp.type = 'password';
+            icon.className = 'bi bi-eye';
+        }
+    }
+</script>
+}

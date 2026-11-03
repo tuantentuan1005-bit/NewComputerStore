@@ -1,0 +1,477 @@
+@model NewComputerStore.ViewModels.AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Thống kê doanh thu";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<!-- Filters -->
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">@LocalizationHelper.T("Dashboard")</h1>
+</div>
+
+<div class="card mb-4 shadow-sm">
+    <div class="card-body">
+        <form method="get" asp-action="Index" class="row gx-2 gy-2 align-items-center">
+            <div class="col-auto">
+                <label class="visually-hidden">Từ ngày</label>
+                <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control form-control-sm" title="Từ ngày">
+            </div>
+            <div class="col-auto">
+                <label class="visually-hidden">Đến ngày</label>
+                <input type="date" name="toDate" value="@ViewBag.ToDate" class="form-control form-control-sm" title="Đến ngày">
+            </div>
+            <div class="col-auto">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">Tất cả trạng thái</option>
+                    @if (ViewBag.Status == "Processing") { <option value="Processing" selected>@LocalizationHelper.T("Processing")</option> } else { <option value="Processing">@LocalizationHelper.T("Processing")</option> }
+                    @if (ViewBag.Status == "Shipped") { <option value="Shipped" selected>@LocalizationHelper.T("Shipped")</option> } else { <option value="Shipped">@LocalizationHelper.T("Shipped")</option> }
+                    @if (ViewBag.Status == "Delivered") { <option value="Delivered" selected>@LocalizationHelper.T("Delivered")</option> } else { <option value="Delivered">@LocalizationHelper.T("Delivered")</option> }
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-filter"></i> @LocalizationHelper.T("Search")</button>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm">@LocalizationHelper.T("Clear")</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Revenue Cards -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-white bg-success shadow h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1">@LocalizationHelper.T("Revenue Today")</h6>
+                        <h3 class="mb-0 fw-bold">@LocalizationHelper.FormatCurrency(Model.RevenueToday)</h3>
+                    </div>
+                    <i class="bi bi-calendar-day fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-primary shadow h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1">@LocalizationHelper.T("Revenue This Month")</h6>
+                        <h3 class="mb-0 fw-bold">@LocalizationHelper.FormatCurrency(Model.RevenueThisMonth)</h3>
+                        
+                        <div class="mt-2">
+                            @if (Model.RevenueGrowth > 0)
+                            {
+                                <span class="badge bg-white text-success"><i class="bi bi-arrow-up-right"></i> +@Model.RevenueGrowth.ToString("0.##")%</span>
+                            }
+                            else if (Model.RevenueGrowth < 0)
+                            {
+                                <span class="badge bg-white text-danger"><i class="bi bi-arrow-down-right"></i> @Model.RevenueGrowth.ToString("0.##")%</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-white text-secondary">0%</span>
+                            }
+                            <small class="text-white-50 ms-1">@LocalizationHelper.T("Compared to last month") (@LocalizationHelper.FormatCurrency(Model.RevenueLastMonth))</small>
+                        </div>
+                    </div>
+                    <i class="bi bi-calendar-month fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-danger shadow h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1">@LocalizationHelper.T("Total Revenue")</h6>
+                        <h3 class="mb-0 fw-bold">@LocalizationHelper.FormatCurrency(Model.TotalRevenue)</h3>
+                    </div>
+                    <i class="bi bi-cash-stack fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email Statistics Row -->
+<div class="row mb-4">
+    <div class="col-md-2-4 col-sm-6 mb-3">
+        <div class="card bg-white border-0 shadow-sm rounded-3 h-100 p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="text-uppercase text-muted small mb-1" style="font-size: 0.75rem;">Tổng email gửi</h6>
+                    <h3 class="mb-0 fw-bold text-dark">@Model.TotalEmailsSent</h3>
+                </div>
+                <div class="bg-primary-subtle text-primary rounded-3 p-3 fs-3 leading-none">
+                    <i class="bi bi-envelope"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2-4 col-sm-6 mb-3">
+        <div class="card bg-white border-0 shadow-sm rounded-3 h-100 p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="text-uppercase text-muted small mb-1" style="font-size: 0.75rem;">Gửi thành công</h6>
+                    <h3 class="mb-0 fw-bold text-success">@Model.TotalEmailsSuccess</h3>
+                </div>
+                <div class="bg-success-subtle text-success rounded-3 p-3 fs-3 leading-none">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2-4 col-sm-6 mb-3">
+        <div class="card bg-white border-0 shadow-sm rounded-3 h-100 p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="text-uppercase text-muted small mb-1" style="font-size: 0.75rem;">Gửi thất bại</h6>
+                    <h3 class="mb-0 fw-bold text-danger">@Model.TotalEmailsFailed</h3>
+                </div>
+                <div class="bg-danger-subtle text-danger rounded-3 p-3 fs-3 leading-none">
+                    <i class="bi bi-x-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2-4 col-sm-6 mb-3">
+        <div class="card bg-white border-0 shadow-sm rounded-3 h-100 p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="text-uppercase text-muted small mb-1" style="font-size: 0.75rem;">Tỷ lệ xác thực</h6>
+                    <h3 class="mb-0 fw-bold text-info">@Model.EmailVerificationRate.ToString("0.#")%</h3>
+                </div>
+                <div class="bg-info-subtle text-info rounded-3 p-3 fs-3 leading-none">
+                    <i class="bi bi-person-check"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2-4 col-sm-6 mb-3">
+        <div class="card bg-white border-0 shadow-sm rounded-3 h-100 p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="text-uppercase text-muted small mb-1" style="font-size: 0.75rem;">Chưa xác thực</h6>
+                    <h3 class="mb-0 fw-bold text-warning">@Model.UnverifiedUsersCount</h3>
+                </div>
+                <div class="bg-warning-subtle text-warning rounded-3 p-3 fs-3 leading-none">
+                    <i class="bi bi-person-x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .col-md-2-4 {
+        flex: 0 0 auto;
+        width: 20%;
+    }
+    @@media (max-width: 992px) {
+        .col-md-2-4 {
+            width: 33.333%;
+        }
+    }
+    @@media (max-width: 768px) {
+        .col-md-2-4 {
+            width: 50%;
+        }
+    }
+    @@media (max-width: 576px) {
+        .col-md-2-4 {
+            width: 100%;
+        }
+    }
+    .bg-primary-subtle { background-color: rgba(13, 110, 253, 0.1) !important; }
+    .bg-success-subtle { background-color: rgba(25, 135, 84, 0.1) !important; }
+    .bg-danger-subtle { background-color: rgba(220, 53, 69, 0.1) !important; }
+    .bg-info-subtle { background-color: rgba(13, 202, 240, 0.1) !important; }
+    .bg-warning-subtle { background-color: rgba(255, 193, 7, 0.1) !important; }
+    .leading-none { line-height: 1 !important; }
+</style>
+
+<!-- Charts -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-white fw-bold">@LocalizationHelper.T("Revenue 7 Days")</div>
+            <div class="card-body">
+                <canvas id="sevenDaysChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-white fw-bold">@LocalizationHelper.T("Revenue By Month") (@DateTime.Now.Year)</div>
+            <div class="card-body">
+                <canvas id="monthsChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email Charts Row -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header bg-white fw-bold">Thống kê gửi email 30 ngày qua (Thành công vs Thất bại)</div>
+            <div class="card-body">
+                <canvas id="email30DaysChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow">
+            <div class="card-header bg-white fw-bold">Tỷ lệ Gửi thư</div>
+            <div class="card-body">
+                <canvas id="emailRatioChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Advanced Analytics Row -->
+<div class="row mb-4">
+    <div class="col-lg-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-success text-white fw-bold">@LocalizationHelper.T("Top 5 Best Selling")</div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light"><tr><th class="ps-3">@LocalizationHelper.T("Product Name")</th><th class="text-end pe-3">@LocalizationHelper.T("Quantity")</th></tr></thead>
+                    <tbody>
+                        @foreach(var item in Model.TopSellingProducts)
+                        {
+                            <tr><td class="ps-3">@item.ProductName</td><td class="text-end pe-3 fw-bold text-success">@item.TotalSold</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-warning text-dark fw-bold">@LocalizationHelper.T("Top 5 Least Selling")</div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light"><tr><th class="ps-3">@LocalizationHelper.T("Product Name")</th><th class="text-end pe-3">@LocalizationHelper.T("Quantity")</th></tr></thead>
+                    <tbody>
+                        @foreach(var item in Model.LeastSellingProducts)
+                        {
+                            <tr><td class="ps-3">@item.ProductName</td><td class="text-end pe-3 fw-bold text-warning">@item.TotalSold</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-danger text-white fw-bold">@LocalizationHelper.T("Dead Stock")</div>
+            <div class="card-body p-0" style="max-height: 250px; overflow-y: auto;">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light"><tr><th class="ps-3">@LocalizationHelper.T("Product Name")</th><th class="text-end pe-3">@LocalizationHelper.T("Status")</th></tr></thead>
+                    <tbody>
+                        @if(Model.DeadStockProducts.Any())
+                        {
+                            @foreach(var item in Model.DeadStockProducts)
+                            {
+                                <tr><td class="ps-3 text-muted">@item.ProductName</td><td class="text-end pe-3"><span class="badge bg-secondary">Tồn kho</span></td></tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr><td colspan="2" class="text-center py-3 text-muted">Không có hàng tồn kho ế.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Paid Orders Table -->
+<div class="card shadow">
+    <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+        <span>@LocalizationHelper.T("Paid Orders List")</span>
+        <span class="badge bg-success">@Model.PaidOrders.Count đơn hợp lệ</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">@LocalizationHelper.T("Order ID")</th>
+                        <th>@LocalizationHelper.T("Customer")</th>
+                        <th>@LocalizationHelper.T("Payment Method")</th>
+                        <th>@LocalizationHelper.T("Total")</th>
+                        <th>@LocalizationHelper.T("Created Date")</th>
+                        <th>@LocalizationHelper.T("Status")</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.PaidOrders.Any())
+                    {
+                        foreach (var item in Model.PaidOrders)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold">#@item.OrderId</td>
+                                <td>
+                                    <div>@item.FullName</div>
+                                    <small class="text-muted">@item.Phone</small>
+                                </td>
+                                <td>
+                                    @if(item.PaymentMethod == "QR")
+                                    {
+                                        <span class="badge bg-primary">@LocalizationHelper.T("QR (Paid)")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">@LocalizationHelper.T("COD")</span>
+                                    }
+                                </td>
+                                <td class="fw-bold text-success">@LocalizationHelper.FormatCurrency(item.TotalPrice)</td>
+                                <td>@LocalizationHelper.FormatDate(item.OrderDate)</td>
+                                <td>
+                                    <span class="badge @(item.Status == "Delivered" ? "bg-success" : "bg-info")">@LocalizationHelper.T(item.Status)</span>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">Không có dữ liệu đơn hàng thỏa mãn điều kiện lọc.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Data for 7 days
+            var labels7Days = @Html.Raw(Json.Serialize(Model.ChartLabels7Days));
+            var data7Days = @Html.Raw(Json.Serialize(Model.ChartData7Days));
+
+            var ctx7 = document.getElementById('sevenDaysChart').getContext('2d');
+            new Chart(ctx7, {
+                type: 'line',
+                data: {
+                    labels: labels7Days,
+                    datasets: [{
+                        label: 'Doanh thu (VNĐ)',
+                        data: data7Days,
+                        borderColor: '#198754',
+                        backgroundColor: 'rgba(25, 135, 84, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            // Data for 12 months
+            var labelsMonths = @Html.Raw(Json.Serialize(Model.ChartLabelsMonths));
+            var dataMonths = @Html.Raw(Json.Serialize(Model.ChartDataMonths));
+
+            var ctxMonth = document.getElementById('monthsChart').getContext('2d');
+            new Chart(ctxMonth, {
+                type: 'bar',
+                data: {
+                    labels: labelsMonths,
+                    datasets: [{
+                        label: 'Doanh thu (VNĐ)',
+                        data: dataMonths,
+                        backgroundColor: '#0d6efd',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            // Data for Email 30 Days
+            var labels30Days = @Html.Raw(Json.Serialize(Model.ChartLabels30Days));
+            var success30Days = @Html.Raw(Json.Serialize(Model.ChartSuccess30Days));
+            var failed30Days = @Html.Raw(Json.Serialize(Model.ChartFailed30Days));
+
+            var ctxEmail30 = document.getElementById('email30DaysChart').getContext('2d');
+            new Chart(ctxEmail30, {
+                type: 'bar',
+                data: {
+                    labels: labels30Days,
+                    datasets: [
+                        {
+                            label: 'Thành công',
+                            data: success30Days,
+                            backgroundColor: '#198754',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Thất bại',
+                            data: failed30Days,
+                            backgroundColor: '#dc3545',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true },
+                        y: { beginAtZero: true, stacked: true }
+                    }
+                }
+            });
+
+            // Data for Email Ratio
+            var emailSuccess = @Model.TotalEmailsSuccess;
+            var emailFailed = @Model.TotalEmailsFailed;
+
+            var ctxRatio = document.getElementById('emailRatioChart').getContext('2d');
+            new Chart(ctxRatio, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Thành công', 'Thất bại'],
+                    datasets: [{
+                        data: [emailSuccess, emailFailed],
+                        backgroundColor: ['#198754', '#dc3545'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        });
+    </script>
+}
